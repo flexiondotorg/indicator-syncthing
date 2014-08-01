@@ -21,6 +21,7 @@ class Main(object):
         self.downloading_files = []
         self.uploading_files = []
         self.recent_files = []
+        self.node_dict = {}
 
         self.menu = Gtk.Menu()
         
@@ -35,6 +36,8 @@ class Main(object):
         self.connected_nodes_menu.set_sensitive(False)
         self.menu.append(self.connected_nodes_menu)
         self.update_connected_nodes()
+        self.connected_nodes_submenu = Gtk.Menu()
+        self.connected_nodes_menu.set_submenu(self.connected_nodes_submenu)
 
         self.current_files_menu = Gtk.MenuItem("Current files")
         self.current_files_menu.show()
@@ -89,8 +92,18 @@ class Main(object):
         if not address[0].hasChildNodes():
             return self.bail_releases("No address specified in config")
         self.syncthing_base = "http://%s" % address[0].firstChild.nodeValue
+
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.check_for_syncthing_update)
+        
+        #read node names from config 
+        nodeids = conf[0].getElementsByTagName("node")
+        for elem in nodeids:
+			if elem.hasAttribute("name"):
+			    print elem.getAttribute("name"), elem.getAttribute("id")
+			    self.node_dict(elem.getAttribute("id")) = elem.getAttribute("name")
+        for de in self.node_dict:
+            print self.node_dict[de]
 
     def syncthing(self, url):
         return urlparse.urljoin(self.syncthing_base, url)
@@ -147,7 +160,7 @@ class Main(object):
 
     def start_poll(self):
         # when this is actually in syncthing, this is what to use
-        # f = Gio.file_new_for_uri(self.syncthing("/rest/events/0"))
+        #f = Gio.file_new_for_uri(self.syncthing("/rest/events/0"))
         f = Gio.file_new_for_uri("http://localhost:5115")
         f.load_contents_async(None, self.fetch_poll)
 
@@ -162,12 +175,13 @@ class Main(object):
         if success:
             try:
                 queue = json.loads(data)
+                for qitem in queue:
+					self.process_event(qitem)
             except ValueError:
                 print "request failed to parse json: error"
                 GLib.timeout_add_seconds(10, self.start_poll)
                 self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
-            for qitem in queue:
-                self.process_event(qitem)
+ 
         else:
             print "request failed"
         if self.downloading_files or self.uploading_files:
@@ -224,6 +238,18 @@ class Main(object):
     def update_connected_nodes(self):
         self.connected_nodes_menu.set_label("Connected machines: %s" % (
             len(self.connected_nodes),))
+        if (len(self.connected_nodes))== 0 :
+            self.connected_nodes_menu.set_sensitive(False)			
+        else:
+            self.connected_nodes_menu.set_sensitive(True)
+            for child in self.connected_nodes_submenu.get_children():
+                self.connected_nodes_submenu.remove(child)
+            for n in self.connected_nodes:
+                mi = Gtk.MenuItem(str(n))	#add node name
+                print n
+                self.connected_nodes_submenu.append(mi)
+                mi.show()
+            
 
     def update_current_files(self):
         self.current_files_menu.set_label(u"Syncing \u21d1 %s  \u21d3 %s" % (
