@@ -92,6 +92,8 @@ class Main(object):
         if not address[0].hasChildNodes():
             return self.bail_releases("No address specified in config")
         self.syncthing_base = "http://%s" % address[0].firstChild.nodeValue
+        
+        print self.syncthing_base 
 
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.check_for_syncthing_update)
@@ -99,11 +101,10 @@ class Main(object):
         #read node names from config 
         nodeids = conf[0].getElementsByTagName("node")
         for elem in nodeids:
-			if elem.hasAttribute("name"):
-			    print elem.getAttribute("name"), elem.getAttribute("id")
-			    self.node_dict(elem.getAttribute("id")) = elem.getAttribute("name")
-        for de in self.node_dict:
-            print self.node_dict[de]
+            if elem.hasAttribute("name"):
+                node_id = elem.getAttribute("id")
+                node_name = elem.getAttribute("name")
+                self.node_dict[node_id] = node_name
 
     def syncthing(self, url):
         return urlparse.urljoin(self.syncthing_base, url)
@@ -198,7 +199,7 @@ class Main(object):
         self.update_last_checked(event["timestamp"])
 
     def event_timeout(self, event):
-        #print "event timeout; re-polling."
+        print "event timeout; re-polling."
         pass
 
     def event_unknown_event(self, event):
@@ -245,7 +246,10 @@ class Main(object):
             for child in self.connected_nodes_submenu.get_children():
                 self.connected_nodes_submenu.remove(child)
             for n in self.connected_nodes:
-                mi = Gtk.MenuItem(str(n))	#add node name
+                if self.node_dict.has_key(n) == False:
+                    mi = Gtk.MenuItem("Unknown Node" + str(n))	#add node name
+                else:
+                    mi = Gtk.MenuItem(self.node_dict[n])
                 print n
                 self.connected_nodes_submenu.append(mi)
                 mi.show()
