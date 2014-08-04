@@ -64,6 +64,8 @@ class Main(object):
 
         self.syncthing_base = "http://localhost:8080"
         GLib.idle_add(self.start_load_config)
+        GLib.idle_add(self.check_for_syncthing_update)
+        self.last_seen_id= int(0)
 
     def start_load_config(self):
         confdir = GLib.get_user_config_dir()
@@ -93,11 +95,6 @@ class Main(object):
             return self.bail_releases("No address specified in config")
         self.syncthing_base = "http://%s" % address[0].firstChild.nodeValue
         
-        print self.syncthing_base 
-
-        GLib.idle_add(self.start_poll)
-        GLib.idle_add(self.check_for_syncthing_update)
-        
         #read node names from config 
         nodeids = conf[0].getElementsByTagName("node")
         for elem in nodeids:
@@ -106,6 +103,9 @@ class Main(object):
                 node_name = elem.getAttribute("name")
                 self.node_dict[node_id] = node_name
 
+        GLib.idle_add(self.start_poll)
+        GLib.idle_add(self.check_for_syncthing_update)
+        
     def syncthing(self, url):
         return urlparse.urljoin(self.syncthing_base, url)
 
@@ -113,10 +113,10 @@ class Main(object):
         webbrowser.open(self.syncthing(""))
 
     def open_releases_page(self, *args):
-        webbrowser.open('https://github.com/calmh/syncthing/releases')
+        webbrowser.open('https://github.com/syncthing/syncthing/releases')
 
     def check_for_syncthing_update(self):
-        f = Gio.file_new_for_uri("https://github.com/calmh/syncthing/releases.atom")
+        f = Gio.file_new_for_uri("https://github.com/syncthing/syncthing/releases.atom")
         f.load_contents_async(None, self.fetch_releases)
 
     def bail_releases(self, message):
@@ -160,9 +160,10 @@ class Main(object):
 
 
     def start_poll(self):
-        # when this is actually in syncthing, this is what to use
-        #f = Gio.file_new_for_uri(self.syncthing("/rest/events/0"))
-        f = Gio.file_new_for_uri("http://localhost:5115")
+        #connection command for testserver
+        #f = Gio.file_new_for_uri("http://localhost:5115")
+        #connection command for a "real" server
+        f = Gio.file_new_for_uri(self.syncthing("/rest/events?since=%s") % self.last_seen_id)
         f.load_contents_async(None, self.fetch_poll)
 
     def fetch_poll(self, fp, async_result):
@@ -177,7 +178,7 @@ class Main(object):
             try:
                 queue = json.loads(data)
                 for qitem in queue:
-					self.process_event(qitem)
+                    self.process_event(qitem)
             except ValueError:
                 print "request failed to parse json: error"
                 GLib.timeout_add_seconds(10, self.start_poll)
@@ -185,6 +186,7 @@ class Main(object):
  
         else:
             print "request failed"
+
         if self.downloading_files or self.uploading_files:
             self.ind.set_icon_full("syncthing-client-updating", 
                 "Updating %s files" % (
@@ -196,45 +198,86 @@ class Main(object):
     def process_event(self, event):
         t = event.get("type", "unknown_event").lower()
         fn = getattr(self, "event_%s" % t, self.event_unknown_event)(event)
-        self.update_last_checked(event["timestamp"])
+        self.update_last_checked(event["time"])
+        self.update_last_seen_id( event["id"] )
 
-    def event_timeout(self, event):
-        print "event timeout; re-polling."
-        pass
 
     def event_unknown_event(self, event):
-        print "got unknown event", event
+        print "got unknown event", event 
 
-    def event_node_connected(self, event):
-        self.connected_nodes.append(event["params"]["node"])
+    def event_statechanged(self,event):
+        if event["data"]["to"] == "syncing" :
+            self.ind.set_attention_icon ("syncthing-client-updating")
+        else:
+            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
+        
+    def event_remoteindexupdated(self,event):
+        pass
+
+    
+    def event_starting(self,event):
+        time = self.convert_time( event["time"] )
+        print "Syncthing is starting at " +   time
+        pass
+
+    def event_startupcomplete(self,event):
+        time = self.convert_time( event["time"] )
+        print "startup done at " + time
+        pass
+    
+    
+    def event_ping(self,event):
+        print "a ping was send at %s" %self.convert_time( event["time"] )
+        pass
+
+    def event_nodediscovered(self,event):
+        pass
+
+    def event_nodeconnected(self, event):
+        self.connected_nodes.append(event["data"]["id"])
         self.update_connected_nodes()
 
-    def event_node_disconnected(self, event):
+    def event_nodedisconnected(self, event):
         try:
-           self.connected_nodes.remove(event["params"]["node"])
+           self.connected_nodes.remove(self.translate_node_id( event["data"]["id"] ))
         except ValueError:
-            print "A node %s disconnected but we didn't know about it"
+            print "A node %s disconnected but we didn't know about it" % event["data"]["id"]
         self.update_connected_nodes()
 
-    def event_pull_start(self, event):
-        file_details = {"repo": event["params"].get("repo"), "file": event["params"].get("file")}
+    def event_itemstarted(self, event):
+        print "item started", event
+        file_details = {"repo": event["params"].get("repo"), "file": event["params"].get("item")}
         self.downloading_files.append(file_details)
         self.update_current_files()
 
-    def event_pull_complete(self, event):
-        file_details = {"repo": event["params"].get("repo"), "file": event["params"].get("file")}
+    def event_localindexupdated(self, event):
+        file_details = {"repo": event["data"]["repo"], "file": event["data"]["name"]}
         try:
             self.downloading_files.remove(file_details)
         except ValueError:
-            print "Completed a file %s which we didn't know about" % (event["params"]["file"],)
-        self.recent_files.append({"file": event["params"]["file"], 
-            "direction": "down", "time": datetime.datetime.now()})
-        self.recent_files = self.recent_files[-5:]
+            print "Completed a file %s which we didn't know about" % (event["data"]["name"],)
+        
+        self.recent_files.append({"file": event["data"]["name"], 
+            "direction": "down", "time":  event["data"]["modified"] })  
+        self.recent_files = self.recent_files[-5:] 
         self.update_current_files()
+    
+    def event_pull_error(self, event):
+        print "Pull error"
 
     def update_last_checked(self, isotime):
         dt = dateutil.parser.parse(isotime)
-        self.last_checked_menu.set_label("Last checked: %s" % (dt.strftime("%H.%M"),))
+        self.last_checked_menu.set_label("Last checked: %s" % (dt.strftime("%H:%M"),))
+    
+    def update_last_seen_id(self, lsi):
+        if lsi > self.last_seen_id:
+            self.last_seen_id= lsi
+            
+    def translate_node_id(self, reqid):
+        if self.node_dict.has_key(reqid) == False:
+            return "Unknown Node: " + str(reqid)
+        else:
+            return self.node_dict[reqid]
 
     def update_connected_nodes(self):
         self.connected_nodes_menu.set_label("Connected machines: %s" % (
@@ -242,19 +285,21 @@ class Main(object):
         if (len(self.connected_nodes))== 0 :
             self.connected_nodes_menu.set_sensitive(False)			
         else:
+            # repopulate the connected nodes menu
             self.connected_nodes_menu.set_sensitive(True)
             for child in self.connected_nodes_submenu.get_children():
                 self.connected_nodes_submenu.remove(child)
-            for n in self.connected_nodes:
-                if self.node_dict.has_key(n) == False:
-                    mi = Gtk.MenuItem("Unknown Node" + str(n))	#add node name
-                else:
-                    mi = Gtk.MenuItem(self.node_dict[n])
-                print n
+            for nid in self.connected_nodes:
+                mi = Gtk.MenuItem(self.translate_node_id(nid))	#add node name
                 self.connected_nodes_submenu.append(mi)
                 mi.show()
-            
 
+    def convert_time(self, time):
+        time=time[:time.index('.')]
+        time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S")
+        time = time.strftime("%d.%m. %H:%M")
+        return time
+        
     def update_current_files(self):
         self.current_files_menu.set_label(u"Syncing \u21d1 %s  \u21d3 %s" % (
             len(self.uploading_files), len(self.downloading_files)))
@@ -281,14 +326,9 @@ class Main(object):
             for child in self.recent_files_submenu.get_children():
                 self.recent_files_submenu.remove(child)
             for f in self.recent_files:
-                if f["direction"] == "down":
-                    updown = u"\u21d3"
-                elif f["direction"] == "up":
-                    updown = u"\u21d1"
-                else:
-                    updown = u"?"
+                updown = u"\u21d3" u"\u21d1"
                 mi = Gtk.MenuItem(u"%s %s (%s)" % (
-                    updown, f["file"], f["time"].strftime("%H.%M")))
+                    updown, f["file"],  f["time"] ))
                 self.recent_files_submenu.append(mi)
                 mi.show()
             self.recent_files_menu.show()
