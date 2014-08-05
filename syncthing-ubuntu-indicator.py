@@ -25,6 +25,7 @@ class Main(object):
         self.uploading_files = []
         self.recent_files = []
         self.node_dict = {}
+        self.last_ping = None
 
         self.menu = Gtk.Menu()
         
@@ -195,7 +196,10 @@ class Main(object):
                 self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
  
         else:
-            print "request failed"
+            if datetime.datetime.now(pytz.utc).isoformat() > self.last_ping:
+                return
+            else:
+                print "request failed"
 
         if self.downloading_files or self.uploading_files:
             self.ind.set_icon_full("syncthing-client-updating", 
@@ -237,7 +241,8 @@ class Main(object):
     
     
     def event_ping(self,event):
-        print "a ping was send at %s" %self.convert_time( event["time"] )
+        self.last_ping = dateutil.parser.parse(event["time"])
+        print "a ping was send at %s" % self.last_ping.strftime("%H:%M")
         pass
 
     def event_nodediscovered(self,event):
@@ -305,8 +310,7 @@ class Main(object):
                 mi.show()
 
     def convert_time(self, time):
-        time=time[:time.index('.')]
-        time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S")
+        time = dateutil.parser.parse(time)
         time = time.strftime("%d.%m. %H:%M")
         return time
         
