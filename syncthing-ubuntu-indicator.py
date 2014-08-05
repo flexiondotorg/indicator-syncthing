@@ -547,6 +547,7 @@ class Main(object):
         dialog.set_program_name("Syncthing Ubuntu Indicator")
         dialog.set_version("0.1")
         dialog.set_website('http://www.syncthing.net')
+        dialog.set_comments("This menu applet for systems supporting AppIndicator can show the status of a syncthing instance")
         dialog.set_license(LICENSE)
         dialog.run()
         dialog.destroy()
