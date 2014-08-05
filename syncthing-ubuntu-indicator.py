@@ -179,6 +179,7 @@ class Main(object):
             self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id = 0
+            self.connected_nodes = []
             return
         if success:
             try:
