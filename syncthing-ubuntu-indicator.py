@@ -178,7 +178,7 @@ class Main(object):
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         except:
             print "request failed: error"
-            GLib.timeout_add_seconds(2, self.start_poll)
+            GLib.timeout_add_seconds(5, self.start_poll)
             self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id = 0
