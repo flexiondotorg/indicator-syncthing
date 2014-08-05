@@ -163,9 +163,9 @@ class Main(object):
 
 
     def start_poll(self):
-        #connection command for testserver
+        #this is the connection command for the included testserver
         #f = Gio.file_new_for_uri("http://localhost:5115")
-        #connection command for a "real" server
+        #this is the connection command for a "real" server:
         f = Gio.file_new_for_uri(self.syncthing("/rest/events?since=%s") % self.last_seen_id)
         f.load_contents_async(None, self.fetch_poll)
 
