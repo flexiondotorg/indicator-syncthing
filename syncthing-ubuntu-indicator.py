@@ -1,3 +1,6 @@
+
+#!/bin/env python2.7
+#Syncthing Ubuntu Indicator v0
 from gi.repository import Gtk, Gio, GLib
 from gi.repository import AppIndicator3 as appindicator
 from xml.dom import minidom
