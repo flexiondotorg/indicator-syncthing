@@ -97,11 +97,14 @@ class Main(object):
         
         #read node names from config 
         nodeids = conf[0].getElementsByTagName("node")
-        for elem in nodeids:
-            if elem.hasAttribute("name"):
-                node_id = elem.getAttribute("id")
-                node_name = elem.getAttribute("name")
-                self.node_dict[node_id] = node_name
+        try:
+            for elem in nodeids:
+                if elem.hasAttribute("name"):
+                    node_id = elem.getAttribute("id")
+                    node_name = elem.getAttribute("name")
+                    self.node_dict[node_id] = node_name
+        except:
+            "config has no nodes configured"
 
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.check_for_syncthing_update)
