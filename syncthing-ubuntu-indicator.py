@@ -212,6 +212,7 @@ class Main(object):
         
         self.connected_nodes = []
         self.connected_nodes_info = {}
+        self.connected_nodes_info_old = {}
         self.downloading_files = []
         self.uploading_files = []
         self.recent_files = []
@@ -529,6 +530,7 @@ class Main(object):
         print "Pull error"
     
     def event_rest_connections(self, event):
+        self.connected_nodes_info_old = self.connected_nodes_info
         self.connected_nodes_info = event["data"]
         for existing in self.connected_nodes:   #add node information which are not known
             for recieved in self.connected_nodes_info:
@@ -567,12 +569,16 @@ class Main(object):
             for nid in self.connected_nodes:
                 node_id = self.translate_node_id(nid)
                 mi = Gtk.MenuItem()	#add node name
-                #try: 
-                mi.set_label(node_id + "\n"+ "IP: " + self.connected_nodes_info[nid]["Address"] + "\n" +
-                "Total In: " + str(self.connected_nodes_info[nid]["InBytesTotal"] /1000.00)+ " kB" + "\n" +
-                "Total Out: " + str(self.connected_nodes_info[nid]["OutBytesTotal"] /1000.00) + " kB")
-                #except: 
-                #mi.set_label(node_id + " no data")
+                try:
+                    speedIn = self.calc_speed(self.connected_nodes_info[nid]["InBytesTotal"], self.connected_nodes_info_old[nid]["InBytesTotal"] )
+                    speedOut = self.calc_speed(self.connected_nodes_info[nid]["OutBytesTotal"], self.connected_nodes_info_old[nid]["OutBytesTotal"] )
+                    mi.set_label(node_id + "\n"+ "IP: " + self.connected_nodes_info[nid]["Address"] + "\n" +
+                    "   Total In: " + str(self.connected_nodes_info[nid]["InBytesTotal"] /1000.00)+ " kB" + "\n" +
+                    "   Speed In:" + str(speedIn) + "b/s" + "\n" +
+                    "   Total Out: " + str(self.connected_nodes_info[nid]["OutBytesTotal"] /1000.00) + " kB" + "\n" +
+                    "   Speed Out:" + str(speedOut) + "b/s")
+                except: 
+                    mi.set_label(node_id + " \n no data")
                 self.connected_nodes_submenu.append(mi)
                 mi.show()
 
@@ -616,7 +622,10 @@ class Main(object):
     
     def update_system_information(self):
         pass
-
+    
+    def calc_speed(self,old,new):
+        return old/(new *10 )
+        
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
         dialog.set_program_name("Syncthing Ubuntu Indicator")
