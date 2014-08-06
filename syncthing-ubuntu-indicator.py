@@ -1,5 +1,5 @@
-
-#!/usr/bin/env python2.7
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-s
 #Syncthing Ubuntu Indicator v0
 LICENSE = """Apache License
                            Version 2.0, January 2004
@@ -456,7 +456,7 @@ class Main(object):
 
     def event_itemstarted(self, event):
         print "item started", event
-        file_details = {"repo": event["params"].get("repo"), "file": event["params"].get("item")}
+        file_details = {"repo": event["data"].get("repo"), "file": event["data"].get("item")}
         self.downloading_files.append(file_details)
         self.update_current_files()
 
