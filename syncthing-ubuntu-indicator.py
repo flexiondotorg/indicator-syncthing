@@ -216,6 +216,7 @@ class Main(object):
         self.recent_files = []
         self.node_dict = {}
         self.last_ping = None
+        self.sytem_data = {}
 
         self.menu = Gtk.Menu()
         
@@ -381,20 +382,26 @@ class Main(object):
     def start_rest(self):
         def create_fetch_rest(param):
             f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
-            f.load_contents_async(None, self.fetch_rest)
+            f.load_contents_async(None, self.fetch_rest, param)
         
-        create_fetch_rest("connections")
+        ## save the best for beer...
+        #create_fetch_rest("system")
+        #create_fetch_rest("connections")
+        
     
-    def fetch_rest(self, fp, async_result):
-        try:
+    def fetch_rest(self, fp, async_result, param):
+        #try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
-            #print data
             GLib.timeout_add_seconds(5, self.start_rest)
-        except:
-            print "Couldn't connect to syncthing"
-            GLib.timeout_add_seconds(5, self.start_rest)
-            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
+            if success:
+                self.process_event( {"type":"rest_"+param, "data":data} )
+            else:
+                print "Scotty, we have a problem with REST"
+        #except:
+        #    print "Couldn't connect to syncthing (rest interface)"
+        #    GLib.timeout_add_seconds(10, self.start_rest)
+        #    self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (rest interface) waiting now 10 seconds")
         
     """this attaches the event interface """
     def start_poll(self):
@@ -410,9 +417,9 @@ class Main(object):
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         except:
-            print "Couldn't connect to syncthing"
+            print "Couldn't connect to syncthing (event interface)"
             GLib.timeout_add_seconds(5, self.start_poll)
-            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
+            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (event interface)")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id = 0
             self.connected_nodes = []
@@ -446,8 +453,12 @@ class Main(object):
     def process_event(self, event):
         t = event.get("type", "unknown_event").lower()
         fn = getattr(self, "event_%s" % t, self.event_unknown_event)(event)
-        self.update_last_checked(event["time"])
-        self.update_last_seen_id( event["id"] )
+        ####replace this ugly try by an if statement
+        try:
+            self.update_last_checked(event["time"])
+            self.update_last_seen_id( event["id"] )
+        except:
+            pass
 
 
     def event_unknown_event(self, event):
@@ -515,7 +526,16 @@ class Main(object):
     
     def event_pull_error(self, event):
         print "Pull error"
-
+    
+    def event_rest_connections(self, event):
+        #print event["data"]
+        print "got connections info"
+        
+    def event_rest_system(self, event):
+        print "got system info"
+        
+    """end of the event processing dings """
+    
     def update_last_checked(self, isotime):
         dt = dateutil.parser.parse(isotime)
         self.last_checked_menu.set_label("Last checked: %s" % (dt.strftime("%H:%M"),))
