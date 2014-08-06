@@ -304,13 +304,13 @@ class Main(object):
         self.api_key =  api_key[0].firstChild.nodeValue
         
         
-        #read node names from config 
+        """read node names from config"""
         nodeids = conf[0].getElementsByTagName("node")
         try:
             for elem in nodeids:
                 if elem.hasAttribute("name"):
                     node_id = elem.getAttribute("id")
-                    node_name = elem.getAttribute()
+                    node_name = elem.getAttribute("name")
                     self.node_dict[node_id] = node_name
         except:
             self.bail_releases("config has no nodes configured")
