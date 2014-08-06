@@ -394,7 +394,7 @@ class Main(object):
         #try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
-            GLib.timeout_add_seconds(5, self.start_rest)
+            GLib.timeout_add_seconds(10, self.start_rest)
             if success:
                 self.process_event( {"type":"rest_"+param, "data":json.loads(data)} )
             else:
@@ -530,11 +530,10 @@ class Main(object):
     
     def event_rest_connections(self, event):
         self.connected_nodes_info = event["data"]
-        for existing in self.connected_nodes:
+        for existing in self.connected_nodes:   #add node information which are not known
             for recieved in self.connected_nodes_info:
               pass  
         self.update_connected_nodes()
-        print "got connections info"
         
     def event_rest_system(self, event):
         print "got system info"
@@ -570,8 +569,8 @@ class Main(object):
                 mi = Gtk.MenuItem()	#add node name
                 #try: 
                 mi.set_label(node_id + "\n"+ "IP: " + self.connected_nodes_info[nid]["Address"] + "\n" +
-                "In: " + str(self.connected_nodes_info[nid]["InBytesTotal"] /1000.00)+ "kB" + "\n" +
-                "Out: " + str(self.connected_nodes_info[nid]["OutBytesTotal"] /1000.00) + "kB")
+                "Total In: " + str(self.connected_nodes_info[nid]["InBytesTotal"] /1000.00)+ " kB" + "\n" +
+                "Total Out: " + str(self.connected_nodes_info[nid]["OutBytesTotal"] /1000.00) + " kB")
                 #except: 
                 #mi.set_label(node_id + " no data")
                 self.connected_nodes_submenu.append(mi)
