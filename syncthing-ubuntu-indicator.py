@@ -288,11 +288,21 @@ class Main(object):
         if not conf: return self.bail_releases("No configuration element in config")
         gui = conf[0].getElementsByTagName("gui")
         if not gui: return self.bail_releases("No gui element in config")
+        
+        """find the local syncthing address"""
         address = gui[0].getElementsByTagName("address")
         if not address: return self.bail_releases("No address element in config")
         if not address[0].hasChildNodes():
             return self.bail_releases("No address specified in config")
         self.syncthing_base = "http://%s" % address[0].firstChild.nodeValue
+        
+        """find and fetch the api key"""
+        api_key = gui[0].getElementsByTagName("apikey")
+        if not api_key: return self.bail_releases("No api-key element in config")
+        if not api_key[0].hasChildNodes():
+            return self.bail_releases("No api-key specified in config, please create one via the web interface")
+        self.api_key =  api_key[0].firstChild.nodeValue
+        
         
         #read node names from config 
         nodeids = conf[0].getElementsByTagName("node")
@@ -300,10 +310,11 @@ class Main(object):
             for elem in nodeids:
                 if elem.hasAttribute("name"):
                     node_id = elem.getAttribute("id")
-                    node_name = elem.getAttribute("name")
+                    node_name = elem.getAttribute()
                     self.node_dict[node_id] = node_name
         except:
-            "config has no nodes configured"
+            self.bail_releases("config has no nodes configured")
+        
 
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.check_for_syncthing_update)
