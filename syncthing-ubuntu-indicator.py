@@ -315,7 +315,7 @@ class Main(object):
         except:
             self.bail_releases("config has no nodes configured")
         
-
+        """ Start fetching information from Syncthing """
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.check_for_syncthing_update)
         
@@ -370,21 +370,28 @@ class Main(object):
         else:
             self.syncthing_update_menu.hide()
         GLib.timeout_add_seconds(28800, self.check_for_syncthing_update)
-
-
+    
+    """this attaches the rest interface """
+    def start_rest(self, param):
+        f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
+        f.load_contents_async(None, self.fetch_event)
+        
+        
+    """this attaches the event interface """
     def start_poll(self):
         #this is the connection command for the included testserver
         #f = Gio.file_new_for_uri("http://localhost:5115")
         #this is the connection command for a "real" server:
         f = Gio.file_new_for_uri(self.syncthing("/rest/events?since=%s") % self.last_seen_id)
         f.load_contents_async(None, self.fetch_poll)
+    
 
     def fetch_poll(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         except:
-            print "request failed: error"
+            print "Couldn't connect to syncthing"
             GLib.timeout_add_seconds(5, self.start_poll)
             self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
@@ -414,7 +421,9 @@ class Main(object):
         else:
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         GLib.idle_add(self.start_poll)
-
+    
+    
+    """ processing of the events coming from the event interface"""
     def process_event(self, event):
         t = event.get("type", "unknown_event").lower()
         fn = getattr(self, "event_%s" % t, self.event_unknown_event)(event)
@@ -426,11 +435,13 @@ class Main(object):
         print "got unknown event", event 
 
     def event_statechanged(self,event):
-        if event["data"]["to"] == "syncing" :
+        self.ind.set_attention_icon ("syncthing-client-updating")
+        """if event["data"]["to"] == "syncing" :
             self.ind.set_attention_icon ("syncthing-client-updating")
+            #self.ind.set_icon_full("syncthing-client-updating", "Updating")
         else:
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
-        
+        """
     def event_remoteindexupdated(self,event):
         pass
 
@@ -448,7 +459,7 @@ class Main(object):
     
     def event_ping(self,event):
         self.last_ping = dateutil.parser.parse(event["time"])
-        print "a ping was send at %s" % self.last_ping.strftime("%H:%M")
+        #print "a ping was send at %s" % self.last_ping.strftime("%H:%M")
         pass
 
     def event_nodediscovered(self,event):
