@@ -211,6 +211,7 @@ class Main(object):
         self.ind.set_status (appindicator.IndicatorStatus.ACTIVE)
         
         self.connected_nodes = []
+        self.connected_nodes_info = {}
         self.downloading_files = []
         self.uploading_files = []
         self.recent_files = []
@@ -386,7 +387,7 @@ class Main(object):
         
         ## save the best for beer...
         #create_fetch_rest("system")
-        #create_fetch_rest("connections")
+        create_fetch_rest("connections")
         
     
     def fetch_rest(self, fp, async_result, param):
@@ -395,7 +396,7 @@ class Main(object):
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
             GLib.timeout_add_seconds(5, self.start_rest)
             if success:
-                self.process_event( {"type":"rest_"+param, "data":data} )
+                self.process_event( {"type":"rest_"+param, "data":json.loads(data)} )
             else:
                 print "Scotty, we have a problem with REST"
         #except:
@@ -528,7 +529,11 @@ class Main(object):
         print "Pull error"
     
     def event_rest_connections(self, event):
-        #print event["data"]
+        self.connected_nodes_info = event["data"]
+        for existing in self.connected_nodes:
+            for recieved in self.connected_nodes_info:
+              pass  
+        self.update_connected_nodes()
         print "got connections info"
         
     def event_rest_system(self, event):
@@ -554,7 +559,7 @@ class Main(object):
         self.connected_nodes_menu.set_label("Connected machines: %s" % (
             len(self.connected_nodes),))
         if (len(self.connected_nodes))== 0 :
-            self.connected_nodes_menu.set_sensitive(False)			
+            self.connected_nodes_menu.set_sensitive(False)		
         else:
             # repopulate the connected nodes menu
             self.connected_nodes_menu.set_sensitive(True)
@@ -562,7 +567,13 @@ class Main(object):
                 self.connected_nodes_submenu.remove(child)
             for nid in self.connected_nodes:
                 node_id = self.translate_node_id(nid)
-                mi = Gtk.MenuItem(node_id)	#add node name
+                mi = Gtk.MenuItem()	#add node name
+                #try: 
+                mi.set_label(node_id + "\n"+ "IP: " + self.connected_nodes_info[nid]["Address"] + "\n" +
+                "In: " + str(self.connected_nodes_info[nid]["InBytesTotal"] /1000.00)+ "kB" + "\n" +
+                "Out: " + str(self.connected_nodes_info[nid]["OutBytesTotal"] /1000.00) + "kB")
+                #except: 
+                #mi.set_label(node_id + " no data")
                 self.connected_nodes_submenu.append(mi)
                 mi.show()
 
