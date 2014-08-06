@@ -259,6 +259,7 @@ class Main(object):
         self.syncthing_base = "http://localhost:8080"
         GLib.idle_add(self.start_load_config)
         GLib.idle_add(self.check_for_syncthing_update)
+        
         self.last_seen_id= int(0)
         
         self.about_menu = Gtk.MenuItem("About")
@@ -266,6 +267,9 @@ class Main(object):
         self.about_menu.show()
         self.menu.append(self.about_menu)
 
+
+
+    """ read needed values from config file """
     def start_load_config(self):
         confdir = GLib.get_user_config_dir()
         if not confdir: confdir = os.path.expanduser("~/.config")
@@ -317,8 +321,10 @@ class Main(object):
         
         """ Start fetching information from Syncthing """
         GLib.idle_add(self.start_poll)
+        GLib.idle_add(self.start_rest)
         GLib.idle_add(self.check_for_syncthing_update)
-        
+     
+    """ creates a url from given values and the address read from file """
     def syncthing(self, url):
         return urlparse.urljoin(self.syncthing_base, url)
 
@@ -372,10 +378,23 @@ class Main(object):
         GLib.timeout_add_seconds(28800, self.check_for_syncthing_update)
     
     """this attaches the rest interface """
-    def start_rest(self, param):
-        f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
-        f.load_contents_async(None, self.fetch_event)
+    def start_rest(self):
+        def create_fetch_rest(param):
+            f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
+            f.load_contents_async(None, self.fetch_rest)
         
+        create_fetch_rest("connections")
+    
+    def fetch_rest(self, fp, async_result):
+        try:
+            success, data, etag = fp.load_contents_finish(async_result)
+            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
+            #print data
+            GLib.timeout_add_seconds(5, self.start_rest)
+        except:
+            print "Couldn't connect to syncthing"
+            GLib.timeout_add_seconds(5, self.start_rest)
+            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
         
     """this attaches the event interface """
     def start_poll(self):
@@ -522,7 +541,8 @@ class Main(object):
             for child in self.connected_nodes_submenu.get_children():
                 self.connected_nodes_submenu.remove(child)
             for nid in self.connected_nodes:
-                mi = Gtk.MenuItem(self.translate_node_id(nid))	#add node name
+                node_id = self.translate_node_id(nid)
+                mi = Gtk.MenuItem(node_id)	#add node name
                 self.connected_nodes_submenu.append(mi)
                 mi.show()
 
@@ -563,6 +583,9 @@ class Main(object):
                 self.recent_files_submenu.append(mi)
                 mi.show()
             self.recent_files_menu.show()
+    
+    def update_system_information(self):
+        pass
 
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
