@@ -283,7 +283,6 @@ class Main(object):
 
     """ read needed values from config file """
     def start_load_config(self):
-        log.debug("start_load_config")
         confdir = GLib.get_user_config_dir()
         if not confdir: confdir = os.path.expanduser("~/.config")
         conffile = os.path.join(confdir, "syncthing", "config.xml")
@@ -293,7 +292,6 @@ class Main(object):
         f.load_contents_async(None, self.finish_load_config)
     
     def finish_load_config(self, fp, async_result):
-        log.debug("finish_load_config")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
         except:
@@ -357,7 +355,6 @@ class Main(object):
         GLib.timeout_add_seconds(600, self.check_for_syncthing_update)
 
     def fetch_releases(self, fp, async_result):
-        log.debug("fetch_releases")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
         except:
@@ -380,7 +377,6 @@ class Main(object):
         f.load_contents_async(None, self.fetch_local_version, title)
 
     def fetch_local_version(self, fp, async_result, most_recent_release):
-        log.debug("fetch_local_version")
         try:
             success, local_version, etag = fp.load_contents_finish(async_result)
         except:
@@ -395,7 +391,6 @@ class Main(object):
     
     """this attaches the rest interface """
     def start_rest(self):
-        log.debug ("start_rest")
         def create_fetch_rest(param):
             f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
             f.load_contents_async(None, self.fetch_rest, param)
@@ -406,7 +401,6 @@ class Main(object):
         
     
     def fetch_rest(self, fp, async_result, param):
-        log.debug ("fetch rest")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
@@ -422,7 +416,6 @@ class Main(object):
         
     """this attaches the event interface """
     def start_poll(self):
-        log.debug ("start_poll")
         #this is the connection command for the included testserver
         #f = Gio.file_new_for_uri("http://localhost:5115")
         #this is the connection command for a "real" server:
@@ -431,7 +424,6 @@ class Main(object):
     
 
     def fetch_poll(self, fp, async_result):
-        log.debug ("fetch_poll")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
@@ -488,7 +480,7 @@ class Main(object):
         self.ind.set_attention_icon ("syncthing-client-updating")
         if event["data"]["to"] == "syncing" :
             self.ind.set_attention_icon ("syncthing-client-updating")
-            #self.ind.set_icon_full("syncthing-client-updating", "Updating")
+            self.ind.set_icon_full("syncthing-client-updating", "Updating")
         else:
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         
