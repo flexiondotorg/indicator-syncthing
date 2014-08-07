@@ -197,9 +197,14 @@ from xml.dom import minidom
 import json, os, webbrowser, datetime, urlparse
 import pytz
 import dateutil.parser
+import logging as log
+
+""" setup debugging: """
+log.basicConfig(filename='debug.log',filemode='w', format='%(asctime)s %(levelname)s: %(message)s',level=log.ERROR)
 
 class Main(object):
     def __init__(self):
+        log.info('Started main procedure')
         icon_path = os.path.normpath(os.path.abspath(os.path.split(__file__)[0]))
         icon_path = os.path.join(icon_path, "icons")
         self.ind = appindicator.Indicator.new_with_path (
@@ -278,15 +283,17 @@ class Main(object):
 
     """ read needed values from config file """
     def start_load_config(self):
+        log.debug("start_load_config")
         confdir = GLib.get_user_config_dir()
         if not confdir: confdir = os.path.expanduser("~/.config")
         conffile = os.path.join(confdir, "syncthing", "config.xml")
         if not os.path.isfile(conffile):
-            print "Couldn't find config file."
+            log.error( "start_load_config: Couldn't find config file." )
         f = Gio.file_new_for_path(conffile)
         f.load_contents_async(None, self.finish_load_config)
     
     def finish_load_config(self, fp, async_result):
+        log.debug("finish_load_config")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
         except:
@@ -346,10 +353,11 @@ class Main(object):
         f.load_contents_async(None, self.fetch_releases)
 
     def bail_releases(self, message):
-        print message
+        log.error( message )
         GLib.timeout_add_seconds(600, self.check_for_syncthing_update)
 
     def fetch_releases(self, fp, async_result):
+        log.debug("fetch_releases")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
         except:
@@ -372,6 +380,7 @@ class Main(object):
         f.load_contents_async(None, self.fetch_local_version, title)
 
     def fetch_local_version(self, fp, async_result, most_recent_release):
+        log.debug("fetch_local_version")
         try:
             success, local_version, etag = fp.load_contents_finish(async_result)
         except:
@@ -386,6 +395,7 @@ class Main(object):
     
     """this attaches the rest interface """
     def start_rest(self):
+        log.debug ("start_rest")
         def create_fetch_rest(param):
             f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
             f.load_contents_async(None, self.fetch_rest, param)
@@ -396,6 +406,7 @@ class Main(object):
         
     
     def fetch_rest(self, fp, async_result, param):
+        log.debug ("fetch rest")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
@@ -403,14 +414,15 @@ class Main(object):
             if success:
                 self.process_event( {"type":"rest_"+param, "data":json.loads(data)} )
             else:
-                print "Scotty, we have a problem with REST"
+                log.error ("fetch_rest: Scotty, we have a problem with REST: I cannot process the data")
         except:
-            print "Couldn't connect to syncthing (rest interface)"
+            log.error( "fetch_rest: Couldn't connect to syncthing (rest interface)" )
             GLib.timeout_add_seconds(10, self.start_rest)
             self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (rest interface) waiting now 10 seconds")
         
     """this attaches the event interface """
     def start_poll(self):
+        log.debug ("start_poll")
         #this is the connection command for the included testserver
         #f = Gio.file_new_for_uri("http://localhost:5115")
         #this is the connection command for a "real" server:
@@ -419,11 +431,12 @@ class Main(object):
     
 
     def fetch_poll(self, fp, async_result):
+        log.debug ("fetch_poll")
         try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         except:
-            print "Couldn't connect to syncthing (event interface)"
+            log.error( "fetch_poll: Couldn't connect to syncthing (event interface)" )
             GLib.timeout_add_seconds(5, self.start_poll)
             self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (event interface)")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
@@ -436,7 +449,7 @@ class Main(object):
                 for qitem in queue:
                     self.process_event(qitem)
             except ValueError:
-                print "request failed to parse json: error"
+                log.warning( "fetch_poll: request failed to parse json: error" )
                 GLib.timeout_add_seconds(5, self.start_poll)
                 self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
  
@@ -444,7 +457,7 @@ class Main(object):
             if datetime.datetime.now(pytz.utc).isoformat() > self.last_ping:
                 return
             else:
-                print "request failed"
+                log.error( "fetch_poll: request failed" )
 
         if self.downloading_files or self.uploading_files:
             self.ind.set_icon_full("syncthing-client-updating", 
@@ -468,7 +481,7 @@ class Main(object):
 
 
     def event_unknown_event(self, event):
-        print "got unknown event", event 
+        log.debug ( "got unknown event", event  )
 
     def event_statechanged(self,event):
         self.ind.set_attention_icon ("syncthing-client-updating")
@@ -484,18 +497,18 @@ class Main(object):
     
     def event_starting(self,event):
         time = self.convert_time( event["time"] )
-        #print "Syncthing is starting at " +   time
+        log.debug ( "Recieved Syncthing is starting at " +   time )
         pass
 
     def event_startupcomplete(self,event):
         time = self.convert_time( event["time"] )
-        #print "startup done at " + time
+        log.debug (  "startup done at " + time )
         pass
     
     
     def event_ping(self,event):
         self.last_ping = dateutil.parser.parse(event["time"])
-        #print "a ping was send at %s" % self.last_ping.strftime("%H:%M")
+        log.debug (  "a ping was send at %s" % self.last_ping.strftime("%H:%M") )
         pass
 
     def event_nodediscovered(self,event):
@@ -509,11 +522,11 @@ class Main(object):
         try:
            self.connected_nodes.remove(self.translate_node_id( event["data"]["id"] ))
         except ValueError:
-            print "A node %s disconnected but we didn't know about it" % event["data"]["id"]
+            log.debug (  "A node %s disconnected but we didn't know about it" % event["data"]["id"] )
         self.update_connected_nodes()
 
     def event_itemstarted(self, event):
-        print "item started", event
+        log.debug (  "item started", event )
         file_details = {"repo": event["data"].get("repo"), "file": event["data"].get("item"), "direction": "up"}
         self.downloading_files.append(file_details)
         self.update_current_files()
@@ -523,7 +536,7 @@ class Main(object):
         try:
             self.downloading_files.remove(file_details)
         except ValueError:
-            print "Completed a file %s which we didn't know about" % (event["data"]["name"],)
+            log.debug ( "Completed a file %s which we didn't know about" % (event["data"]["name"],) )
         
         self.recent_files.append({"file": event["data"]["name"], 
             "direction": "down", "time":  event["data"]["modified"] })  
@@ -539,7 +552,7 @@ class Main(object):
         self.update_connected_nodes()
         
     def event_rest_system(self, event):
-        print "got system info"
+        log.debug (  "got system info" )
         
     """end of the event processing dings """
     
