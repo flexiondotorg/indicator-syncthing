@@ -520,14 +520,15 @@ class Main(object):
 
     def event_itemstarted(self, event):
         log.debug (  "item started", event )
-        file_details = {"repo": event["data"].get("repo"), "file": event["data"].get("item"), "direction": "up"}
+        file_details = {"repo": event["data"]["repo"], "file": event["data"]["item"], "direction": "down"}
         self.downloading_files.append(file_details)
         self.update_current_files()
 
     def event_localindexupdated(self, event):
-        file_details = {"repo": event["data"]["repo"], "file": event["data"]["name"]}
+        file_details = {"repo": event["data"]["repo"], "file": event["data"]["name"], "direction": "down"}
         try:
             self.downloading_files.remove(file_details)
+            log.debug( "file locally updated " + file_details["file"])
         except ValueError:
             log.debug ( "Completed a file %s which we didn't know about" % (event["data"]["name"],) )
         
