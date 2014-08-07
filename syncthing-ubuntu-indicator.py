@@ -437,6 +437,7 @@ class Main(object):
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         except:
             log.error( "fetch_poll: Couldn't connect to syncthing (event interface)" )
+            log.exception("Logging an uncaught exception")
             GLib.timeout_add_seconds(5, self.start_poll)
             self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (event interface)")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
@@ -485,12 +486,12 @@ class Main(object):
 
     def event_statechanged(self,event):
         self.ind.set_attention_icon ("syncthing-client-updating")
-        """if event["data"]["to"] == "syncing" :
+        if event["data"]["to"] == "syncing" :
             self.ind.set_attention_icon ("syncthing-client-updating")
             #self.ind.set_icon_full("syncthing-client-updating", "Updating")
         else:
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
-        """
+        
     def event_remoteindexupdated(self,event):
         pass
 
