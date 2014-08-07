@@ -269,7 +269,11 @@ class Main(object):
         self.about_menu.connect("activate", self.show_about)
         self.about_menu.show()
         self.menu.append(self.about_menu)
-
+        
+        self.quit_button = Gtk.MenuItem("Quit")
+        self.quit_button.connect("activate", self.leave)
+        self.quit_button.show()
+        self.menu.append(self.quit_button)
 
 
     """ read needed values from config file """
@@ -392,18 +396,18 @@ class Main(object):
         
     
     def fetch_rest(self, fp, async_result, param):
-        #try:
+        try:
             success, data, etag = fp.load_contents_finish(async_result)
             self.ind.set_icon_full("syncthing-client-idle", "Up to date")
-            GLib.timeout_add_seconds(10, self.start_rest)
+            GLib.timeout_add_seconds(5, self.start_rest)
             if success:
                 self.process_event( {"type":"rest_"+param, "data":json.loads(data)} )
             else:
                 print "Scotty, we have a problem with REST"
-        #except:
-        #    print "Couldn't connect to syncthing (rest interface)"
-        #    GLib.timeout_add_seconds(10, self.start_rest)
-        #    self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (rest interface) waiting now 10 seconds")
+        except:
+            print "Couldn't connect to syncthing (rest interface)"
+            GLib.timeout_add_seconds(10, self.start_rest)
+            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (rest interface) waiting now 10 seconds")
         
     """this attaches the event interface """
     def start_poll(self):
@@ -480,12 +484,12 @@ class Main(object):
     
     def event_starting(self,event):
         time = self.convert_time( event["time"] )
-        print "Syncthing is starting at " +   time
+        #print "Syncthing is starting at " +   time
         pass
 
     def event_startupcomplete(self,event):
         time = self.convert_time( event["time"] )
-        print "startup done at " + time
+        #print "startup done at " + time
         pass
     
     
@@ -510,7 +514,7 @@ class Main(object):
 
     def event_itemstarted(self, event):
         print "item started", event
-        file_details = {"repo": event["data"].get("repo"), "file": event["data"].get("item")}
+        file_details = {"repo": event["data"].get("repo"), "file": event["data"].get("item"), "direction": "up"}
         self.downloading_files.append(file_details)
         self.update_current_files()
 
@@ -525,9 +529,6 @@ class Main(object):
             "direction": "down", "time":  event["data"]["modified"] })  
         self.recent_files = self.recent_files[-5:] 
         self.update_current_files()
-    
-    def event_pull_error(self, event):
-        print "Pull error"
     
     def event_rest_connections(self, event):
         self.connected_nodes_info_old = self.connected_nodes_info
@@ -628,13 +629,17 @@ class Main(object):
         
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
+        dialog.set_logo (None)
         dialog.set_program_name("Syncthing Ubuntu Indicator")
-        dialog.set_version("0.1")
+        dialog.set_version("0.1.1")
         dialog.set_website('http://www.syncthing.net')
         dialog.set_comments("This menu applet for systems supporting AppIndicator can show the status of a syncthing instance")
         dialog.set_license(LICENSE)
         dialog.run()
         dialog.destroy()
+    
+    def leave(self, widget):
+        exit()
 
 if __name__ == "__main__":
     import signal
