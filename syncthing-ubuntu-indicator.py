@@ -212,16 +212,16 @@ class Main(object):
                             "syncthing-client-idle",
                             appindicator.IndicatorCategory.APPLICATION_STATUS,
                             icon_path)
-        self.ind.set_attention_icon ("syncthing-client-updating")
         self.ind.set_status (appindicator.IndicatorStatus.ACTIVE)
         
-        self.connected_nodes = []
-        self.connected_nodes_info = {}
-        self.connected_nodes_info_old = {}
+        self.state = "paused"
+        self.set_icon()
+        
         self.downloading_files = []
         self.uploading_files = []
         self.recent_files = []
-        self.node_dict = {}
+        self.repos = []
+        self.nodes = []
         self.last_ping = None
         self.sytem_data = {}
 
@@ -232,14 +232,20 @@ class Main(object):
         self.last_checked_menu.set_sensitive(False)
         self.menu.append(self.last_checked_menu)
         self.update_last_checked(datetime.datetime.now(pytz.utc).isoformat())
-
+        
         self.connected_nodes_menu = Gtk.MenuItem("Connected to: ?")
         self.connected_nodes_menu.show()
         self.connected_nodes_menu.set_sensitive(False)
         self.menu.append(self.connected_nodes_menu)
-        self.update_connected_nodes()
         self.connected_nodes_submenu = Gtk.Menu()
         self.connected_nodes_menu.set_submenu(self.connected_nodes_submenu)
+        
+        self.repo_menu = Gtk.MenuItem("Repositories")
+        self.repo_menu.show()
+        self.repo_menu.set_sensitive(False)
+        self.menu.append(self.repo_menu)
+        self.repo_menu_submenu = Gtk.Menu()
+        self.repo_menu.set_submenu(self.repo_menu_submenu)
 
         self.current_files_menu = Gtk.MenuItem("Current files")
         self.current_files_menu.show()
@@ -279,6 +285,8 @@ class Main(object):
         self.quit_button.connect("activate", self.leave)
         self.quit_button.show()
         self.menu.append(self.quit_button)
+        
+        GLib.idle_add(self.set_icon)
 
 
     """ read needed values from config file """
@@ -324,13 +332,31 @@ class Main(object):
         nodeids = conf[0].getElementsByTagName("node")
         try:
             for elem in nodeids:
-                if elem.hasAttribute("name"):
-                    node_id = elem.getAttribute("id")
-                    node_name = elem.getAttribute("name")
-                    self.node_dict[node_id] = node_name
+                if elem.hasAttribute("name") and elem.hasAttribute("id"):
+                    self.nodes.append ( { "id" :elem.getAttribute("id") ,
+                    "name" : elem.getAttribute("name"), "compression" : elem.getAttribute("compression"),
+                    "state" : "disconnected"
+                    } )
+                    
         except:
             self.bail_releases("config has no nodes configured")
         
+        self.update_connected_nodes()
+
+        
+        """ read repos from config """
+        repos = conf[0].getElementsByTagName("repository")
+        try:
+            for elem in repos:
+                if elem.hasAttribute("id") and elem.hasAttribute("directory"):
+                    self.repos.append( { "repo" :elem.getAttribute("id"),
+                        "directory" :  elem.getAttribute("directory") ,
+                        "state" : "unknown"} )
+        except:
+            self.bail_releases("config has no repositories configured")
+        
+        self.update_repos()
+
         """ Start fetching information from Syncthing """
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.start_rest)
@@ -398,21 +424,22 @@ class Main(object):
         ## save the best for beer...
         #create_fetch_rest("system")
         create_fetch_rest("connections")
+        #create_fetch_rest("model")
         
     
     def fetch_rest(self, fp, async_result, param):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
-            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
             GLib.timeout_add_seconds(5, self.start_rest)
             if success:
                 self.process_event( {"type":"rest_"+param, "data":json.loads(data)} )
             else:
+                set_state("error")
                 log.error ("fetch_rest: Scotty, we have a problem with REST: I cannot process the data")
         except:
             log.error( "fetch_rest: Couldn't connect to syncthing (rest interface)" )
-            GLib.timeout_add_seconds(10, self.start_rest)
-            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (rest interface) waiting now 10 seconds")
+            GLib.timeout_add_seconds(15, self.start_rest)
+            self.set_state("error")
         
     """this attaches the event interface """
     def start_poll(self):
@@ -426,16 +453,14 @@ class Main(object):
     def fetch_poll(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
-            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
         except:
             log.error( "fetch_poll: Couldn't connect to syncthing (event interface)" )
             log.exception("Logging an uncaught exception")
             GLib.timeout_add_seconds(5, self.start_poll)
-            self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing (event interface)")
+            self.set_state("error")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
-            self.last_seen_id = 0
-            self.connected_nodes = []
-            return
+            self.last_seen_id =  0 #self.last_seen_id - 30
+            return 
         if success:
             try:
                 queue = json.loads(data)
@@ -444,20 +469,22 @@ class Main(object):
             except ValueError:
                 log.warning( "fetch_poll: request failed to parse json: error" )
                 GLib.timeout_add_seconds(5, self.start_poll)
-                self.ind.set_icon_full("syncthing-client-error", "Couldn't connect to syncthing")
+                self.set_state("error")
  
         else:
             if datetime.datetime.now(pytz.utc).isoformat() > self.last_ping:
                 return
             else:
                 log.error( "fetch_poll: request failed" )
-
-        if self.downloading_files or self.uploading_files:
-            self.ind.set_icon_full("syncthing-client-updating", 
-                "Updating %s files" % (
-                    len(self.downloading_files) + len(self.uploading_files)))
-        else:
-            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
+                self.set_state("error")
+                
+        """ if self.downloading_files or self.uploading_files:
+            self.set_state("update") 
+                    #"Updating %s files" % (
+                    #len(self.downloading_files) + len(self.uploading_files)))
+        #else:
+            #self.set_state("idle")
+            """
         GLib.idle_add(self.start_poll)
     
     
@@ -476,24 +503,24 @@ class Main(object):
     def event_unknown_event(self, event):
         log.debug ( "got unknown event", event  )
 
-    def event_statechanged(self,event):
-        self.ind.set_attention_icon ("syncthing-client-updating")
-        if event["data"]["to"] == "syncing" :
-            self.ind.set_attention_icon ("syncthing-client-updating")
-            self.ind.set_icon_full("syncthing-client-updating", "Updating")
-        else:
-            self.ind.set_icon_full("syncthing-client-idle", "Up to date")
+    def event_statechanged(self,event): #adapt for repos
+        for elem in self.repos:
+            if elem["repo"] == event["data"]["repo"]:
+                elem["state"] = event["data"]["to"]
+                self.update_repos(event["data"]["repo"])
+        self.set_state()
         
     def event_remoteindexupdated(self,event):
         pass
 
     
     def event_starting(self,event):
-        time = self.convert_time( event["time"] )
-        log.debug ( "Recieved Syncthing is starting at " +   time )
+        self.set_state("paused")
+        log.info ( "Recieved that Syncthing was starting at " +   event["time"] )
         pass
 
     def event_startupcomplete(self,event):
+        self.set_state("idle")
         time = self.convert_time( event["time"] )
         log.debug (  "startup done at " + time )
         pass
@@ -505,17 +532,32 @@ class Main(object):
         pass
 
     def event_nodediscovered(self,event):
-        pass
+        found = False
+        for elm in self.nodes:
+            if elm["id"] == event["data"]["node"]:
+                elm["state"] = "discovered"
+                found = True
+        if found == False:
+            log.warn("unknown node discovered")
+            self.nodes.append({ 
+                "id" : event["data"]["node"],
+                "name":"new unkown node", "address" : event["data"]["addrs"],
+                 "state" : "unknown" })
+        self.update_connected_nodes()
+            
 
     def event_nodeconnected(self, event):
-        self.connected_nodes.append(event["data"]["id"])
+        for elem in self.nodes:
+            if event["data"]["id"] == elem["id"]:
+                elem["state"]= "connected"
+                log.debug("node %s connected" % elem["name"])
         self.update_connected_nodes()
 
     def event_nodedisconnected(self, event):
-        try:
-           self.connected_nodes.remove(self.translate_node_id( event["data"]["id"] ))
-        except ValueError:
-            log.debug (  "A node %s disconnected but we didn't know about it" % event["data"]["id"] )
+        for elem in self.nodes:
+            if event["data"]["id"] == elem["id"]:
+                elem["state"]= "disconnected"
+                log.debug("node %s disconnected" % elem["name"])
         self.update_connected_nodes()
 
     def event_itemstarted(self, event):
@@ -523,6 +565,7 @@ class Main(object):
         file_details = {"repo": event["data"]["repo"], "file": event["data"]["item"], "direction": "down"}
         self.downloading_files.append(file_details)
         self.update_current_files()
+        self.set_state("syncing")
 
     def event_localindexupdated(self, event):
         file_details = {"repo": event["data"]["repo"], "file": event["data"]["name"], "direction": "down"}
@@ -538,12 +581,7 @@ class Main(object):
         self.update_current_files()
     
     def event_rest_connections(self, event):
-        self.connected_nodes_info_old = self.connected_nodes_info
-        self.connected_nodes_info = event["data"]
-        for existing in self.connected_nodes:   #add node information which are not known
-            for recieved in self.connected_nodes_info:
-              pass  
-        self.update_connected_nodes()
+        pass
         
     def event_rest_system(self, event):
         log.debug (  "got system info" )
@@ -558,38 +596,54 @@ class Main(object):
         if lsi > self.last_seen_id:
             self.last_seen_id= lsi
             
-    def translate_node_id(self, reqid):
-        if self.node_dict.has_key(reqid) == False:
-            return "Unknown Node: " + str(reqid)
-        else:
-            return self.node_dict[reqid]
+
 
     def update_connected_nodes(self):
-        self.connected_nodes_menu.set_label("Connected machines: %s" % (
-            len(self.connected_nodes),))
-        if (len(self.connected_nodes))== 0 :
+        self.connected_nodes_menu.set_label("Connected machines: %s" % self.count_connected() )
+        if len(self.nodes) == 0  :
+            self.connected_nodes_menu.set_label("Connected machines: 0")
             self.connected_nodes_menu.set_sensitive(False)		
         else:
-            # repopulate the connected nodes menu
             self.connected_nodes_menu.set_sensitive(True)
-            for child in self.connected_nodes_submenu.get_children():
-                self.connected_nodes_submenu.remove(child)
-            for nid in self.connected_nodes:
-                node_id = self.translate_node_id(nid)
-                mi = Gtk.MenuItem()	#add node name
-                try:
-                    speedIn = self.calc_speed(self.connected_nodes_info[nid]["InBytesTotal"], self.connected_nodes_info_old[nid]["InBytesTotal"] )
-                    speedOut = self.calc_speed(self.connected_nodes_info[nid]["OutBytesTotal"], self.connected_nodes_info_old[nid]["OutBytesTotal"] )
-                    mi.set_label(node_id + "\n"+ "IP: " + self.connected_nodes_info[nid]["Address"] + "\n" +
-                    "   Total In: " + str(self.connected_nodes_info[nid]["InBytesTotal"] /1000.00)+ " kB" + "\n" +
-                    "   Speed In:" + str(speedIn) + "b/s" + "\n" +
-                    "   Total Out: " + str(self.connected_nodes_info[nid]["OutBytesTotal"] /1000.00) + " kB" + "\n" +
-                    "   Speed Out:" + str(speedOut) + "b/s")
-                except: 
-                    mi.set_label(node_id + " \n no data")
-                self.connected_nodes_submenu.append(mi)
-                mi.show()
-
+            
+            if len(self.nodes) == len (self.connected_nodes_submenu):
+                
+                """this updates the connected nodes menu """
+                for mi in self.connected_nodes_submenu:
+                    for elm in self.nodes:
+                        if str(mi.get_label()).split(' ', 1)[0] == elm["name"]:
+                            mi.set_label( elm["name"] + "   " + "["+ elm["state"] + "]") 
+                            if elm["state"] == ("connected"):
+                                mi.set_sensitive(True)
+                            else:
+                                mi.set_sensitive(False)
+            
+            
+            
+            else:
+                """ this populates the connected nodes menu with nodes from config """
+                
+                for child in self.connected_nodes_submenu.get_children():
+                    self.connected_nodes_submenu.remove(child)
+            
+                
+                for nid in self.nodes:
+                    mi = Gtk.MenuItem(nid["name"] + "   [" +  nid["state"] + "]")	#add node name
+                    
+                    if nid["state"] == "connected":
+                        mi.set_sensitive(True)
+                    else:
+                        mi.set_sensitive(False)
+                    self.connected_nodes_submenu.append(mi)
+                    mi.show()
+                
+    def count_connected(self):
+        count = 0
+        for elem in self.nodes:
+            if elem["state"]== "connected":
+                count += 1
+        return count   
+            
     def convert_time(self, time):
         time = dateutil.parser.parse(time)
         time = time.strftime("%d.%m. %H:%M")
@@ -598,10 +652,13 @@ class Main(object):
     def update_current_files(self):
         self.current_files_menu.set_label(u"Syncing \u21d1 %s  \u21d3 %s" % (
             len(self.uploading_files), len(self.downloading_files)))
+            
         if (len(self.uploading_files), len(self.downloading_files)) == (0,0):
             self.current_files_menu.hide()
+            #self.set_state("idle")
         else:
             # repopulate the current files menu
+            self.set_state("syncing")
             for child in self.current_files_submenu.get_children():
                 self.current_files_submenu.remove(child)
             for f in self.uploading_files:
@@ -627,8 +684,40 @@ class Main(object):
                 self.recent_files_submenu.append(mi)
                 mi.show()
             self.recent_files_menu.show()
+   
+    """ this populates the repos menu with repos from config """
+    def update_repos(self, event=False):
+        if len(self.repos) == 0 :
+            self.repo_menu.set_sensitive(False)		
+        else:
+            self.repo_menu.set_sensitive(True)
+            
+            if len(self.repos) == len (self.repo_menu_submenu):                
+                for mi in self.repo_menu_submenu:
+                    for elm in self.repos:
+                        if str(mi.get_label()).split(' ', 1)[0] == elm["repo"]:
+                            mi.set_label( elm["repo"] + "   " + "["+ elm["state"] + "]") 
+                            if elm["state"] == ("idle" or "scanning" or "syncing"):
+                                mi.set_sensitive(True)
+                            else:
+                                mi.set_sensitive(False)
+            else:
+                for child in self.repo_menu_submenu.get_children():
+                    self.repo_menu_submenu.remove(child)
     
-    def update_system_information(self):
+                for rid in self.repos:
+                    mi = Gtk.MenuItem( rid["repo"] + "   " + "["+ rid["state"] + "]")	#add node name
+                    self.repo_menu_submenu.append(mi)
+                    mi.show()
+        
+    def count_nodes_online(self):
+        count = 0
+        for elem in self.nodes:
+            if elem["state"] == "connected":
+                count+=1
+        return count
+    
+    def update_system_information(self): #to do
         pass
     
     def calc_speed(self,old,new):
@@ -644,6 +733,51 @@ class Main(object):
         dialog.set_license(LICENSE)
         dialog.run()
         dialog.destroy()
+    
+    def set_state(self, s=None):
+        if s == None:
+            s = self.state
+
+        if s == "error":
+            self.state = s
+        else:
+            rc = self.repo_check_state()
+            if rc != "unknown":
+                self.state = rc
+            else:
+                self.state = s
+        
+        self.set_icon()
+        log.debug ( "state changed to %s" % s )
+    
+    def repo_check_state(self):
+        state= {"syncing" : 0, "idle" : 0, "cleaning" : 0, "scanning" : 0, "unknown":0}
+        for elem in self.repos:
+            state[ elem["state"] ] += 1
+        if state["syncing"] > 0:
+            return "syncing"
+        else:
+            if state["scanning"] or state["cleaning"] > 0:
+                return "scanning"
+            else:
+                return "idle"
+        
+        
+                
+    
+    def set_icon(self):
+        icon = { "updating": {"name":"syncthing-client-updating", "descr":"Updating"},
+        "idle" : {"name":"syncthing-client-idle" ,"descr":"Nothing to do"},
+        "syncing" : {"name":"syncthing-client-updown","descr":"Transferring Data"},
+        "error" : {"name":"syncthing-client-error","descr":"Scotty, We Have A Problem!"},
+        "paused" : {"name":"syncthing-client-paused","descr":"Paused"},
+        "scanning":{"name":"syncthing-client-scanning","descr":"Scanning Directories"},
+        "cleaning":{"name":"syncthing-client-scanning","descr":"Cleaning Directories"}
+        }
+        
+        self.ind.set_attention_icon (icon[self.state]["name"] )
+        self.ind.set_icon_full(icon[self.state]["name"], icon[self.state]["descr"] )
+        #GLib.timeout_add_seconds(2, self.set_icon)
     
     def leave(self, widget):
         exit()
