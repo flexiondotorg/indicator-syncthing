@@ -200,7 +200,7 @@ import dateutil.parser
 import logging as log
 
 """ setup debugging: """
-log.basicConfig(filename='debug.log',filemode='w', format='%(asctime)s %(levelname)s: %(message)s',level=log.ERROR)
+log.basicConfig(filename='debug.log',filemode='w', format='%(asctime)s %(levelname)s: %(message)s',level=log.DEBUG)
 
 class Main(object):
     def __init__(self):
