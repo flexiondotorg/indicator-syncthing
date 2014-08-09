@@ -200,7 +200,7 @@ import dateutil.parser
 import logging as log
 
 """ setup debugging: """
-log.basicConfig(filename='debug.log',filemode='w', format='%(asctime)s %(levelname)s: %(message)s',level=log.DEBUG)
+log.basicConfig(filename='debug.log',filemode='w', format='%(asctime)s %(levelname)s: %(message)s',level=log.ERROR)
 
 class Main(object):
     def __init__(self):
@@ -260,10 +260,8 @@ class Main(object):
         self.recent_files_menu.set_submenu(self.recent_files_submenu)
         self.update_current_files()
 
-        open_web_ui = Gtk.MenuItem("Open web interface")
-        open_web_ui.connect("activate", self.open_web_ui)
-        open_web_ui.show()
-        self.menu.append(open_web_ui)
+
+        
         self.ind.set_menu(self.menu)
 
         self.syncthing_update_menu = Gtk.MenuItem("Update check")
@@ -276,15 +274,33 @@ class Main(object):
         
         self.last_seen_id= int(0)
         
+        
+        self.more_menu = Gtk.MenuItem("More")
+        self.more_menu.show()
+        self.menu.append(self.more_menu)
+        
+        self.more_submenu = Gtk.Menu()
+        self.more_menu.set_submenu(self.more_submenu)
+        
+        open_web_ui = Gtk.MenuItem("Open web interface")
+        open_web_ui.connect("activate", self.open_web_ui)
+        open_web_ui.show()
+        self.more_submenu.append(open_web_ui)
+        
+        restart_syncthing = Gtk.MenuItem("Restart Syncthing")
+        restart_syncthing.connect("activate", self.restart)
+        restart_syncthing.show()
+        self.more_submenu.append(restart_syncthing)
+        
         self.about_menu = Gtk.MenuItem("About")
         self.about_menu.connect("activate", self.show_about)
         self.about_menu.show()
-        self.menu.append(self.about_menu)
+        self.more_submenu.append(self.about_menu)
         
         self.quit_button = Gtk.MenuItem("Quit")
         self.quit_button.connect("activate", self.leave)
         self.quit_button.show()
-        self.menu.append(self.quit_button)
+        self.more_submenu.append(self.quit_button)
         
         GLib.idle_add(self.set_icon)
 
@@ -341,7 +357,6 @@ class Main(object):
         except:
             self.bail_releases("config has no nodes configured")
         
-        self.update_connected_nodes()
 
         
         """ read repos from config """
@@ -355,9 +370,11 @@ class Main(object):
         except:
             self.bail_releases("config has no repositories configured")
         
-        self.update_repos()
+        
 
         """ Start fetching information from Syncthing """
+        GLib.idle_add( self.update_repos )
+        GLib.idle_add( self.update_connected_nodes )
         GLib.idle_add(self.start_poll)
         GLib.idle_add(self.start_rest)
         GLib.idle_add(self.check_for_syncthing_update)
@@ -416,10 +433,12 @@ class Main(object):
         GLib.timeout_add_seconds(28800, self.check_for_syncthing_update)
     
     """this attaches the rest interface """
-    def start_rest(self):
+    def start_rest(self, param=None):
         def create_fetch_rest(param):
             f = Gio.file_new_for_uri(self.syncthing("/rest/" + param + "?x-api-key=" + self.api_key) )
             f.load_contents_async(None, self.fetch_rest, param)
+        
+        if param!=None: create_fetch_rest(param)
         
         ## save the best for beer...
         #create_fetch_rest("system")
@@ -453,6 +472,7 @@ class Main(object):
     def fetch_poll(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
+            self.set_state("idle")
         except:
             log.error( "fetch_poll: Couldn't connect to syncthing (event interface)" )
             log.exception("Logging an uncaught exception")
@@ -565,7 +585,10 @@ class Main(object):
         file_details = {"repo": event["data"]["repo"], "file": event["data"]["item"], "direction": "down"}
         self.downloading_files.append(file_details)
         self.update_current_files()
-        self.set_state("syncing")
+        for elm in self.repos:
+            if elm["repo"] == event["data"]["repo"]:
+                elm["state"] == "syncing"
+                self.set_state()
 
     def event_localindexupdated(self, event):
         file_details = {"repo": event["data"]["repo"], "file": event["data"]["name"], "direction": "down"}
@@ -636,14 +659,19 @@ class Main(object):
                         mi.set_sensitive(False)
                     self.connected_nodes_submenu.append(mi)
                     mi.show()
-                
+    
+    
+
     def count_connected(self):
         count = 0
         for elem in self.nodes:
             if elem["state"]== "connected":
                 count += 1
         return count   
-            
+     
+    def restart(self, *args):
+        self.start_rest("restart")
+        
     def convert_time(self, time):
         time = dateutil.parser.parse(time)
         time = time.strftime("%d.%m. %H:%M")
@@ -748,7 +776,7 @@ class Main(object):
                 self.state = s
         
         self.set_icon()
-        log.debug ( "state changed to %s" % s )
+        #log.debug ( "state changed to %s" % s )
     
     def repo_check_state(self):
         state= {"syncing" : 0, "idle" : 0, "cleaning" : 0, "scanning" : 0, "unknown":0}
