@@ -420,7 +420,7 @@ class Main(object):
             success, local_version, etag = fp.load_contents_finish(async_result)
         except:
             return self.bail_releases("Request for local version failed")
-        if most_recent_release != local_version:
+        if most_recent_release != local_version[:6]:
             self.syncthing_update_menu.set_label("New version %s available!" % 
                 (most_recent_release,))
             self.syncthing_update_menu.show()
