@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-s
-#Syncthing Ubuntu Indicator v0
+VERSION = "v0.2.1"
 LICENSE = """Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -189,7 +189,9 @@ LICENSE = """Apache License
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License."""
-
+TIMEOUT_EVENT = 5
+TIMEOUT_REST = 30
+TIMEOUT_GUI = 5
 
 from gi.repository import Gtk, Gio, GLib
 from gi.repository import AppIndicator3 as appindicator
@@ -300,8 +302,6 @@ class Main(object):
         self.quit_button.connect("activate", self.leave)
         self.quit_button.show()
         self.more_submenu.append(self.quit_button)
-        
-        GLib.idle_add(self.set_icon)
 
 
     """ read needed values from config file """
@@ -368,10 +368,9 @@ class Main(object):
         
         
         
-        """ Start fetching information from Syncthing """
+        """ Start processes """
         
         GLib.idle_add( self.update )
-        GLib.idle_add( self.set_icon )
         GLib.idle_add( self.start_poll )
         GLib.idle_add( self.start_rest )
         GLib.idle_add(self.check_for_syncthing_update)
@@ -446,7 +445,7 @@ class Main(object):
     def fetch_rest(self, fp, async_result, param):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
-            GLib.timeout_add_seconds(5, self.start_rest)
+            GLib.timeout_add_seconds(TIMEOUT_REST, self.start_rest)
             if success:
                 self.process_event( {"type":"rest_"+param, "data":json.loads(data)} )
             else:
@@ -473,7 +472,7 @@ class Main(object):
         except:
             log.error( "fetch_poll: Couldn't connect to syncthing (event interface)" )
             log.exception("Logging an uncaught exception")
-            GLib.timeout_add_seconds(10, self.start_poll)
+            GLib.timeout_add_seconds(15, self.start_poll)
             self.set_state("error")
             ##add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id =  0 #self.last_seen_id - 30
@@ -603,7 +602,15 @@ class Main(object):
         self.state["update_files"] = True
     
     def event_rest_connections(self, event):
-        pass
+        for elem in event["data"].iterkeys():
+            if elem != "total":
+                for nid in self.nodes:
+                    if nid["id"] == elem:
+                        nid["state"] = "connected"
+                        self.state["update_nodes"] = True
+        return
+        
+        
         
     def event_rest_system(self, event):
         log.debug (  "got system info" )
@@ -767,7 +774,7 @@ class Main(object):
             if self.state[func]:
                 log.debug (func)
                 start = getattr( self, "%s"  % func )()
-        GLib.timeout_add_seconds(5, self.update)
+        GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
     
     def set_state(self, s=None):
         if s == None:
