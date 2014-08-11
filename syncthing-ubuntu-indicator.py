@@ -455,6 +455,8 @@ class Main(object):
             log.error( "fetch_rest: Couldn't connect to syncthing (rest interface)" )
             GLib.timeout_add_seconds(15, self.start_rest)
             self.set_state("error")
+        finally:
+            del fp
         
     """this attaches the event interface """
     def start_poll(self):
