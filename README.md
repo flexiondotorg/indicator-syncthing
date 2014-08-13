@@ -12,6 +12,11 @@ dependencies
 ==========================
 python2 AppIndicator3
 python2 gtk 
+& the python2 versions of:
+python-dateutil
+python-tz
+
+
 
 (I'm running Arch Linux so somebody maybe can fill the dependencies for other distributions, if there are some?)
 
