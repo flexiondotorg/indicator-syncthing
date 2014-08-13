@@ -10,11 +10,11 @@ The project is in an early stage and contributions are welcome.
 
 dependencies
 ==========================
+
 * python2 AppIndicator3
 * python2 gtk 
-& the python2 versions of:
-* python-dateutil
-* python-tz
+* python-dateutil (python2 version)
+* python-tz (python2 version)
 
 
 
