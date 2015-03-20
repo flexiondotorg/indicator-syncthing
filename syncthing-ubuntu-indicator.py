@@ -21,7 +21,7 @@ TIMEOUT_REST = 30
 TIMEOUT_GUI = 5
 
 ''' setup debugging: '''
-log.basicConfig(filename='debug.log', filemode='w', format='%(asctime)s %(levelname)s: %(message)s', level=log.ERROR)
+log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log.ERROR)
 
 class Main(object):
     def __init__(self):
