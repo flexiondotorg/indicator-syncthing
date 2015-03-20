@@ -21,7 +21,7 @@ TIMEOUT_REST = 30
 TIMEOUT_GUI = 5
 
 ''' setup debugging: '''
-log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log.ERROR)
+log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log.INFO)
 
 class Main(object):
     def __init__(self):
@@ -194,12 +194,10 @@ class Main(object):
         except:
             self.bail_releases('config has no repositories configured')
         
-        
-        
         ''' Start processes '''
-        GLib.idle_add( self.update )
-        GLib.idle_add( self.start_poll )
-        GLib.idle_add( self.start_rest )
+        GLib.idle_add(self.update)
+        GLib.idle_add(self.start_poll)
+        GLib.idle_add(self.start_rest)
         GLib.idle_add(self.check_for_syncthing_update)
      
     ''' creates a url from given values and the address read from file '''
