@@ -247,13 +247,12 @@ class Main(object):
 
     def fetch_local_version(self, fp, async_result, most_recent_release):
         try:
-            success, local_version, etag = fp.load_contents_finish(async_result)
+            success, data, etag = fp.load_contents_finish(async_result)
         except:
             return self.bail_releases('Request for local version failed')
 
-        print most_recent_release
-        print local_version[:6]
-        if most_recent_release != local_version[:6]:
+        local_version = json.loads(data)['version']
+        if most_recent_release != local_version:
             self.syncthing_update_menu.set_label('New version %s available!' % most_recent_release)
             self.syncthing_update_menu.show()
         else:
