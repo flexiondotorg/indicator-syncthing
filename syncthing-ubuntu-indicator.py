@@ -167,8 +167,8 @@ class Main(object):
             return self.bail_releases('No api-key specified in config, please create one via the web interface')
         self.api_key = api_key[0].firstChild.nodeValue
         
-        '''read node names from config'''
-        nodeids = conf[0].getElementsByTagName('node')
+        '''read device names from config'''
+        nodeids = conf[0].getElementsByTagName('device')
         try:
             for elem in nodeids:
                 if elem.hasAttribute('name') and elem.hasAttribute('id'):
@@ -179,20 +179,20 @@ class Main(object):
                         'state': 'disconnected',
                         })                    
         except:
-            self.bail_releases('config has no nodes configured')
+            self.bail_releases('config has no devices configured')
                 
-        ''' read repos from config '''
-        repos = conf[0].getElementsByTagName('repository')
+        ''' read folders from config '''
+        repos = conf[0].getElementsByTagName('folder')
         try:
             for elem in repos:
-                if elem.hasAttribute('id') and elem.hasAttribute('directory'):
+                if elem.hasAttribute('id') and elem.hasAttribute('path'):
                     self.repos.append({
                         'repo': elem.getAttribute('id'),
-                        'directory':  elem.getAttribute('directory'),
+                        'directory':  elem.getAttribute('path'),
                         'state': 'unknown',
                         })
         except:
-            self.bail_releases('config has no repositories configured')
+            self.bail_releases('config has no folders configured')
         
         ''' Start processes '''
         GLib.idle_add(self.update)
@@ -355,7 +355,7 @@ class Main(object):
 
     def event_statechanged(self,event): # adapt for repos
         for elem in self.repos:
-            if elem['repo'] == event['data']['repo']:
+            if elem['repo'] == event['data']['folder']:
                 elem['state'] = event['data']['to']
                 self.state['update_repos']=True
         self.set_state()
