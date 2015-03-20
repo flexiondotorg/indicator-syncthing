@@ -251,6 +251,8 @@ class Main(object):
         except:
             return self.bail_releases('Request for local version failed')
 
+        print most_recent_release
+        print local_version[:6]
         if most_recent_release != local_version[:6]:
             self.syncthing_update_menu.set_label('New version %s available!' % most_recent_release)
             self.syncthing_update_menu.show()
