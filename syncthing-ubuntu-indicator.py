@@ -403,10 +403,10 @@ class Main(object):
         
     def event_itemstarted(self, event):
         log.debug('item started', event)
-        file_details = {'repo': event['data']['repo'], 'file': event['data']['item'], 'direction': 'down'}
+        file_details = {'repo': event['data']['folder'], 'file': event['data']['item'], 'direction': 'down'}
         self.downloading_files.append(file_details)
         for elm in self.repos:
-            if elm['repo'] == event['data']['repo']:
+            if elm['repo'] == event['data']['folder']:
                 elm['state'] = 'syncing'
                 self.set_state()
         self.state['update_files'] = True
@@ -414,7 +414,7 @@ class Main(object):
 
     def event_localindexupdated(self, event):
         '''move this to update_files'''
-        file_details = {'repo': event['data']['repo'], 'file': event['data']['name'], 'direction': 'down'}
+        file_details = {'repo': event['data']['folder'], 'file': event['data']['name'], 'direction': 'down'}
         try:
             self.downloading_files.remove(file_details)
             log.debug('file locally updated %s' % file_details['file'])
