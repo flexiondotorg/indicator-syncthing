@@ -290,7 +290,10 @@ class Main(object):
             self.set_state('error')
             # add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id = 0 #self.last_seen_id - 30
-            return 
+            return
+        finally:
+            del fp
+
         if success:
             try:
                 queue = json.loads(data)
