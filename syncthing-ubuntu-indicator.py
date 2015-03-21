@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import argparse
 import datetime
 import dateutil.parser
 import json
@@ -19,9 +20,6 @@ VERSION = 'v0.2.1'
 TIMEOUT_EVENT = 5
 TIMEOUT_REST = 30
 TIMEOUT_GUI = 5
-
-''' setup debugging: '''
-log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=log.INFO)
 
 class Main(object):
     def __init__(self):
@@ -657,6 +655,20 @@ class Main(object):
 if __name__ == '__main__':
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--loglevel', choices=['debug', 'info', 'error'], default='info')
+    args = parser.parse_args()
+    if args.loglevel == 'debug':
+        loglevel = log.DEBUG
+    elif args.loglevel == 'info':
+        loglevel = log.INFO
+    elif args.loglevel == 'error':
+        loglevel = log.ERROR
+    
+    # setup debugging:
+    log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevel)
+    
     app = Main()
     Gtk.main()
 
