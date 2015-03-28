@@ -50,7 +50,7 @@ _On Ubuntu 14.02:_
   * python-urllib3
   * python-dateutil
 
-  then go to[gnome-extensions-appindicator] and install "AppIndicator support"
+  then go to [gnome-extensions-appindicator] and install "AppIndicator support"
 
 
 
