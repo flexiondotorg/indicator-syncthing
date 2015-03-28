@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import argparse
 import datetime
 import dateutil.parser
 import json
@@ -19,9 +20,6 @@ VERSION = 'v0.2.1'
 TIMEOUT_EVENT = 5
 TIMEOUT_REST = 30
 TIMEOUT_GUI = 5
-
-''' setup debugging: '''
-log.basicConfig(filename='debug.log', filemode='w', format='%(asctime)s %(levelname)s: %(message)s', level=log.ERROR)
 
 class Main(object):
     def __init__(self):
@@ -61,7 +59,7 @@ class Main(object):
         self.connected_nodes_submenu = Gtk.Menu()
         self.connected_nodes_menu.set_submenu(self.connected_nodes_submenu)
         
-        self.repo_menu = Gtk.MenuItem('Repositories')
+        self.repo_menu = Gtk.MenuItem('Folders')
         self.repo_menu.show()
         self.repo_menu.set_sensitive(False)
         self.menu.append(self.repo_menu)
@@ -73,7 +71,6 @@ class Main(object):
         self.menu.append(self.current_files_menu)
         self.current_files_submenu = Gtk.Menu()
         self.current_files_menu.set_submenu(self.current_files_submenu)
-
 
         self.recent_files_menu = Gtk.MenuItem('Recently synced')
         self.menu.append(self.recent_files_menu)
@@ -130,6 +127,7 @@ class Main(object):
             log.error('start_load_config: Couldn\'t find config file.')
         f = Gio.file_new_for_path(conffile)
         f.load_contents_async(None, self.finish_load_config)
+
     
     def finish_load_config(self, fp, async_result):
         try:
@@ -167,8 +165,8 @@ class Main(object):
             return self.bail_releases('No api-key specified in config, please create one via the web interface')
         self.api_key = api_key[0].firstChild.nodeValue
         
-        '''read node names from config'''
-        nodeids = conf[0].getElementsByTagName('node')
+        '''read device names from config'''
+        nodeids = conf[0].getElementsByTagName('device')
         try:
             for elem in nodeids:
                 if elem.hasAttribute('name') and elem.hasAttribute('id'):
@@ -179,86 +177,66 @@ class Main(object):
                         'state': 'disconnected',
                         })                    
         except:
-            self.bail_releases('config has no nodes configured')
+            self.bail_releases('config has no devices configured')
                 
-        ''' read repos from config '''
-        repos = conf[0].getElementsByTagName('repository')
+        ''' read folders from config '''
+        repos = conf[0].getElementsByTagName('folder')
         try:
             for elem in repos:
-                if elem.hasAttribute('id') and elem.hasAttribute('directory'):
+                if elem.hasAttribute('id') and elem.hasAttribute('path'):
                     self.repos.append({
                         'repo': elem.getAttribute('id'),
-                        'directory':  elem.getAttribute('directory'),
+                        'directory':  elem.getAttribute('path'),
                         'state': 'unknown',
                         })
         except:
-            self.bail_releases('config has no repositories configured')
-        
-        
+            self.bail_releases('config has no folders configured')
         
         ''' Start processes '''
-        GLib.idle_add( self.update )
-        GLib.idle_add( self.start_poll )
-        GLib.idle_add( self.start_rest )
+        GLib.idle_add(self.update)
+        GLib.idle_add(self.start_poll)
+        GLib.idle_add(self.start_rest)
         GLib.idle_add(self.check_for_syncthing_update)
      
     ''' creates a url from given values and the address read from file '''
     def syncthing(self, url):
         return urlparse.urljoin(self.syncthing_base, url)
 
+
     def open_web_ui(self, *args):
         webbrowser.open(self.syncthing(''))
+
 
     def open_releases_page(self, *args):
         webbrowser.open('https://github.com/syncthing/syncthing/releases')
 
+
     def check_for_syncthing_update(self):
-        f = Gio.file_new_for_uri('https://github.com/syncthing/syncthing/releases.atom')
-        f.load_contents_async(None, self.fetch_releases)
+        f = Gio.file_new_for_uri(self.syncthing('/rest/upgrade'))
+        f.load_contents_async(None, self.finish_upgrade_check)
+
 
     def bail_releases(self, message):
         log.error(message)
         GLib.timeout_add_seconds(600, self.check_for_syncthing_update)
 
-    def fetch_releases(self, fp, async_result):
+
+    def finish_upgrade_check(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
         except:
-            return self.bail_releases('Request for github releases list failed: error')
+            return self.bail_releases('Request for upgrade check failed')
 
-        try:
-            dom = minidom.parseString(data)
-        except:
-            return self.bail_releases('Couldn\'t parse github release xml')
-
-        entries = dom.getElementsByTagName('entry')
-        if not entries:
-            return self.bail_releases('Github release list had no entries')
-
-        title = entries[0].getElementsByTagName('title')
-        if not title:
-            return self.bail_releases('Github release list first entry had no title')
-
-        title = title[0]
-        if not title.hasChildNodes():
-            return self.bail_releases('Github release list first entry had empty title')
-
-        title = title.firstChild.nodeValue
-        f = Gio.file_new_for_uri(self.syncthing('/rest/version'))
-        f.load_contents_async(None, self.fetch_local_version, title)
-
-    def fetch_local_version(self, fp, async_result, most_recent_release):
-        try:
-            success, local_version, etag = fp.load_contents_finish(async_result)
-        except:
-            return self.bail_releases('Request for local version failed')
-
-        if most_recent_release != local_version[:6]:
-            self.syncthing_update_menu.set_label('New version %s available!' % most_recent_release)
+        upgrade_data = json.loads(data)
+        
+        if upgrade_data['newer']:
+            self.syncthing_update_menu.set_label('New version {} available!'.format(upgrade_data['latest']))
             self.syncthing_update_menu.show()
         else:
-            self.syncthing_update_menu.hide()
+            self.syncthing_update_menu.set_label('Version {}'.format(upgrade_data['running']))
+            self.syncthing_update_menu.show()
         GLib.timeout_add_seconds(28800, self.check_for_syncthing_update)
+
     
     '''this attaches the rest interface '''
     def start_rest(self, param=None):
@@ -291,6 +269,7 @@ class Main(object):
         finally:
             del fp
         
+        
     '''this attaches the event interface '''
     def start_poll(self):
         # this is the connection command for the included testserver
@@ -311,7 +290,10 @@ class Main(object):
             self.set_state('error')
             # add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id = 0 #self.last_seen_id - 30
-            return 
+            return
+        finally:
+            del fp
+
         if success:
             try:
                 queue = json.loads(data)
@@ -355,20 +337,24 @@ class Main(object):
     def event_unknown_event(self, event):
         log.debug('got unknown event', event)
 
+
     def event_statechanged(self,event): # adapt for repos
         for elem in self.repos:
-            if elem['repo'] == event['data']['repo']:
+            if elem['repo'] == event['data']['folder']:
                 elem['state'] = event['data']['to']
                 self.state['update_repos']=True
         self.set_state()
         
+        
     def event_remoteindexupdated(self,event):
         pass
+
 
     def event_starting(self,event):
         self.set_state('paused')
         log.info('Received that Syncthing was starting at %s' % event['time'])
         pass
+
 
     def event_startupcomplete(self,event):
         self.set_state('idle')
@@ -381,6 +367,7 @@ class Main(object):
         self.last_ping = dateutil.parser.parse(event['time'])
         log.debug('a ping was send at %s' % self.last_ping.strftime('%H:%M'))
         pass
+
 
     def event_nodediscovered(self,event):
         found = False
@@ -405,6 +392,7 @@ class Main(object):
                 log.debug('node %s connected' % elem['name'])
         self.state['update_nodes'] = True
 
+
     def event_nodedisconnected(self, event):
         for elem in self.nodes:
             if event['data']['id'] == elem['id']:
@@ -412,19 +400,21 @@ class Main(object):
                 log.debug('node %s disconnected' % elem['name'])
         self.state['update_nodes'] = True
         
+        
     def event_itemstarted(self, event):
         log.debug('item started', event)
-        file_details = {'repo': event['data']['repo'], 'file': event['data']['item'], 'direction': 'down'}
+        file_details = {'repo': event['data']['folder'], 'file': event['data']['item'], 'direction': 'down'}
         self.downloading_files.append(file_details)
         for elm in self.repos:
-            if elm['repo'] == event['data']['repo']:
+            if elm['repo'] == event['data']['folder']:
                 elm['state'] = 'syncing'
                 self.set_state()
         self.state['update_files'] = True
 
+
     def event_localindexupdated(self, event):
         '''move this to update_files'''
-        file_details = {'repo': event['data']['repo'], 'file': event['data']['name'], 'direction': 'down'}
+        file_details = {'repo': event['data']['folder'], 'file': event['data']['name'], 'direction': 'down'}
         try:
             self.downloading_files.remove(file_details)
             log.debug('file locally updated %s' % file_details['file'])
@@ -439,6 +429,7 @@ class Main(object):
         self.recent_files = self.recent_files[-5:] 
         self.state['update_files'] = True
     
+    
     def event_rest_connections(self, event):
         for elem in event['data'].iterkeys():
             if elem != 'total':
@@ -448,30 +439,34 @@ class Main(object):
                         self.state['update_nodes'] = True
         return
 
+
     def event_rest_system(self, event):
         log.debug('got system info')
         
     '''end of the event processing dings '''
     
+    
     def update_last_checked(self, isotime):
         dt = dateutil.parser.parse(isotime)
         self.last_checked_menu.set_label('Last checked: %s' % (dt.strftime('%H:%M'),))
     
+    
     def update_last_seen_id(self, lsi):
         if lsi > self.last_seen_id:
-            self.last_seen_id= lsi
+            self.last_seen_id = lsi
+
 
     def update_nodes(self):
-        self.connected_nodes_menu.set_label('Connected machines: %s' % self.count_connected() )
+        self.connected_nodes_menu.set_label('Devices (%s connected)' % self.count_connected() )
         if len(self.nodes) == 0:
-            self.connected_nodes_menu.set_label('Connected machines: 0')
-            self.connected_nodes_menu.set_sensitive(False)		
+            self.connected_nodes_menu.set_label('Devices (0 connected)')
+            self.connected_nodes_menu.set_sensitive(False)
         else:
             self.connected_nodes_menu.set_sensitive(True)
             
             if len(self.nodes) == len(self.connected_nodes_submenu):
                 
-                '''this updates the connected nodes menu '''
+                ''' this updates the connected nodes menu '''
                 for mi in self.connected_nodes_submenu:
                     for elm in self.nodes:
                         if str(mi.get_label()).split(' ', 1)[0] == elm['name']:
@@ -498,16 +493,20 @@ class Main(object):
                     mi.show()
         self.state['update_nodes'] = False
 
+
     def count_connected(self):
         return len([e for e in self.nodes if e['state'] == 'connected']) 
      
+     
     def restart(self, *args):
         self.start_rest('restart')
+        
         
     def convert_time(self, time):
         time = dateutil.parser.parse(time)
         time = time.strftime('%d.%m. %H:%M')
         return time
+        
         
     def update_files(self):
         self.current_files_menu.set_label(u'Syncing \u21d1 %s  \u21d3 %s' % (
@@ -545,14 +544,15 @@ class Main(object):
             self.recent_files_menu.show()
         self.state['update_files'] = False
    
+   
     ''' this populates the repos menu with repos from config '''
     def update_repos(self):
         if len(self.repos) == 0 :
-            self.repo_menu.set_sensitive(False)		
+            self.repo_menu.set_sensitive(False)
         else:
             self.repo_menu.set_sensitive(True)
             
-            if len(self.repos) == len (self.repo_menu_submenu):                
+            if len(self.repos) == len (self.repo_menu_submenu):
                 for mi in self.repo_menu_submenu:
                     for elm in self.repos:
                         if str(mi.get_label()).split(' ', 1)[0] == elm['repo']:
@@ -571,17 +571,21 @@ class Main(object):
                     mi.show()
         self.state['update_repos'] = False
   
+  
     def update_system_information(self): # to do
         pass
     
+    
     def calc_speed(self,old,new):
         return old / (new * 10)
+
 
     def license():
         with open('LICENSE', 'r') as f:
             license = f.read()
         return license
-        
+
+
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
         dialog.set_logo(None)
@@ -592,14 +596,16 @@ class Main(object):
         dialog.set_license(license())
         dialog.run()
         dialog.destroy()
-        
+
+
     def update(self):
         for func in self.state:
             if self.state[func]:
                 log.debug (func)
                 start = getattr(self, '%s' % func)()
         GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
-    
+
+
     def set_state(self, s=None):
         if not s:
             s = self.state['set_icon']
@@ -613,6 +619,7 @@ class Main(object):
             else:
                 self.state['set_icon'] = s
     
+    
     def repo_check_state(self):
         state= {'syncing': 0, 'idle': 0, 'cleaning': 0, 'scanning': 0, 'unknown': 0}
         for elem in self.repos:
@@ -625,6 +632,7 @@ class Main(object):
                 return 'scanning'
             else:
                 return 'idle'
+
 
     def set_icon(self):
         icon = {
@@ -640,13 +648,30 @@ class Main(object):
         self.ind.set_attention_icon(icon[self.state['set_icon'] ]['name'])
         self.ind.set_icon_full(icon[self.state['set_icon']]['name'], icon[self.state['set_icon']]['descr'])
         #GLib.timeout_add_seconds(1, self.set_icon)
-        
+
+
     def leave(self, widget):
         exit()
+
+
 
 if __name__ == '__main__':
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--loglevel', choices=['debug', 'info', 'error'], default='info')
+    args = parser.parse_args()
+    if args.loglevel == 'debug':
+        loglevel = log.DEBUG
+    elif args.loglevel == 'info':
+        loglevel = log.INFO
+    elif args.loglevel == 'error':
+        loglevel = log.ERROR
+    
+    # setup debugging:
+    log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevel)
+    
     app = Main()
     Gtk.main()
 
