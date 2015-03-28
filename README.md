@@ -22,9 +22,38 @@ dependencies
 
 installation
 ==========================
-just run via terminal ./syncthing-ubuntu-indicator.sh
+Tldr:
+in a directory of your choice:
+
+    git clone https://github.com/icaruseffect/syncthing-ubuntu-indicator.git
+  
+    cd syncthing-ubuntu-indicator
+  
+    ./syncthing-ubuntu-indicator.sh
 
 When you are using GNOME3 you can move the icon with the [gnome-shell-extension-appindicator] in the upper notification bar. 
+
+
+_On Ubuntu 14.02:_
+
+    sudo apt-get install python-pip python-tz 
+  
+    sudo pip install python-dateutil
+
+  this should result in the installation of the following packages:
+  * python-colorama
+  * python-distlib
+  * python-html5lib
+  * python-pip
+  * python-requests
+  * python-setuptools
+  * python-urllib3
+  * python-dateutil
+
+  then go to[gnome-extensions-appindicator] and install "AppIndicator support"
+
+
+
 
 
 [Syncthing]: https://github.com/syncthing/syncthing
@@ -32,3 +61,6 @@ When you are using GNOME3 you can move the icon with the [gnome-shell-extension-
 [syncthing-ubuntu-indicator]: https://github.com/stuartlangridge/syncthing-ubuntu-indicator
 
 [gnome-shell-extension-appindicator]: https://github.com/rgcjonas/gnome-shell-extension-appindicator
+
+[gnome-extensions-appindicator]: https://extensions.gnome.org/extension/615/appindicator-support/
+
