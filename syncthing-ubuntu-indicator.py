@@ -582,7 +582,7 @@ class Main(object):
         dialog = Gtk.AboutDialog()
         dialog.set_logo(None)
         dialog.set_program_name('Syncthing Ubuntu Indicator')
-        dialog.set_version('0.1.1')
+        dialog.set_version(VERSION)
         dialog.set_website('http://www.syncthing.net')
         dialog.set_comments('This menu applet for systems supporting AppIndicator can show the status of a syncthing instance')
         dialog.set_license(self.license())
