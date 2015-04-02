@@ -43,10 +43,9 @@ class Main(object):
         self.repos = []
         self.nodes = []
         self.last_ping = None
-        self.sytem_data = {}
+        self.system_data = {}
         self.syncthing_base = 'http://localhost:8080'
         self.last_seen_id = int(0)
-        self.query_in_progress = False
 
         GLib.idle_add(self.start_load_config)
         
@@ -201,10 +200,11 @@ class Main(object):
             self.bail_releases('config has no folders configured')
         
         # Start processes
-        GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
         GLib.idle_add(self.query_rest, 'events')
         GLib.idle_add(self.query_rest, 'connections')
         GLib.idle_add(self.query_rest, 'upgrade')
+        GLib.idle_add(self.query_rest, 'system')
+        GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
      
      
     def syncthing(self, url):
@@ -257,7 +257,7 @@ class Main(object):
             self.syncthing_upgrade_menu.show()
         GLib.timeout_add_seconds(28800, self.query_rest, 'upgrade')
 
-    
+
     def fetch_rest(self, fp, async_result, param):
         log.debug('fetch_rest ' + param)
         try:
@@ -433,7 +433,8 @@ class Main(object):
 
 
     def event_rest_system(self, event):
-        log.debug('got system info')
+        log.debug('event_rest_system got system info')
+        self.system_data = event['data']
         
     # end of the event processing dings
     
@@ -457,7 +458,6 @@ class Main(object):
             self.connected_nodes_menu.set_sensitive(True)
             
             if len(self.nodes) == len(self.connected_nodes_submenu):
-                
                 # this updates the connected nodes menu
                 for mi in self.connected_nodes_submenu:
                     for elm in self.nodes:
@@ -470,11 +470,13 @@ class Main(object):
             
             else:
                 # this populates the connected nodes menu with nodes from config
-                
                 for child in self.connected_nodes_submenu.get_children():
                     self.connected_nodes_submenu.remove(child)
 
                 for nid in self.nodes:
+                    if nid['id'] == self.system_data['myID']:
+                        continue
+                        
                     mi = Gtk.MenuItem('%s   [%s]' % (nid['name'], nid['state'])) #add node name
                     
                     if nid['state'] == 'connected':
