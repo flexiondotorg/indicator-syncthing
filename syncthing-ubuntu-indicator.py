@@ -45,6 +45,8 @@ class Main(object):
         self.last_ping = None
         self.system_data = {}
         self.syncthing_base = 'http://localhost:8080'
+        self.syncthing_version = ''
+        self.device_name = ''
         self.last_seen_id = int(0)
 
         GLib.idle_add(self.start_load_config)
@@ -53,13 +55,26 @@ class Main(object):
     def create_menu(self):
         self.menu = Gtk.Menu()
         
-        self.last_checked_menu = Gtk.MenuItem('Last checked: ?')
-        self.last_checked_menu.show()
-        self.last_checked_menu.set_sensitive(False)
-        self.menu.append(self.last_checked_menu)
-        self.update_last_checked(datetime.datetime.now(pytz.utc).isoformat())
+        #self.last_checked_menu = Gtk.MenuItem('Last checked: ?')
+        #self.last_checked_menu.show()
+        #self.last_checked_menu.set_sensitive(False)
+        #self.menu.append(self.last_checked_menu)
+        #self.update_last_checked(datetime.datetime.now(pytz.utc).isoformat())
         
-        self.connected_nodes_menu = Gtk.MenuItem('Connected to: ?')
+        self.title_menu = Gtk.MenuItem('Syncthing')
+        self.title_menu.show()
+        self.title_menu.set_sensitive(False)
+        self.menu.append(self.title_menu)
+
+        self.syncthing_upgrade_menu = Gtk.MenuItem('Update check')
+        self.syncthing_upgrade_menu.connect('activate', self.open_releases_page)
+        self.menu.append(self.syncthing_upgrade_menu)
+
+        sep = Gtk.SeparatorMenuItem()
+        sep.show()
+        self.menu.append(sep)
+        
+        self.connected_nodes_menu = Gtk.MenuItem('Devices')
         self.connected_nodes_menu.show()
         self.connected_nodes_menu.set_sensitive(False)
         self.menu.append(self.connected_nodes_menu)
@@ -84,10 +99,6 @@ class Main(object):
         self.recent_files_submenu = Gtk.Menu()
         self.recent_files_menu.set_submenu(self.recent_files_submenu)
 
-        self.syncthing_upgrade_menu = Gtk.MenuItem('Update check')
-        self.syncthing_upgrade_menu.connect('activate', self.open_releases_page)
-        self.menu.append(self.syncthing_upgrade_menu)
-
         sep = Gtk.SeparatorMenuItem()
         sep.show()
         self.menu.append(sep)
@@ -109,12 +120,12 @@ class Main(object):
         restart_syncthing.show()
         self.more_submenu.append(restart_syncthing)
         
-        self.about_menu = Gtk.MenuItem('About indicator')
+        self.about_menu = Gtk.MenuItem('About Indicator')
         self.about_menu.connect('activate', self.show_about)
         self.about_menu.show()
         self.more_submenu.append(self.about_menu)
         
-        self.quit_button = Gtk.MenuItem('Quit indicator')
+        self.quit_button = Gtk.MenuItem('Quit Indicator')
         self.quit_button.connect('activate', self.leave)
         self.quit_button.show()
         self.more_submenu.append(self.quit_button)
@@ -248,13 +259,14 @@ class Main(object):
             return self.bail_releases('Request for upgrade check failed')
 
         upgrade_data = json.loads(data)
+        self.syncthing_version = upgrade_data['running']
+        self.update_title_menu()
         
         if upgrade_data['newer']:
             self.syncthing_upgrade_menu.set_label('New version {} available!'.format(upgrade_data['latest']))
             self.syncthing_upgrade_menu.show()
         else:
-            self.syncthing_upgrade_menu.set_label('Version {}'.format(upgrade_data['running']))
-            self.syncthing_upgrade_menu.show()
+            self.syncthing_upgrade_menu.hide()
         GLib.timeout_add_seconds(28800, self.query_rest, 'upgrade')
 
 
@@ -322,7 +334,7 @@ class Main(object):
         fn = getattr(self, 'event_%s' % t, self.event_unknown_event)(event)
         # replace this ugly try by an if statement
         try:
-            self.update_last_checked(event['time'])
+            #self.update_last_checked(event['time'])
             self.update_last_seen_id(event['id'])
         except:
             pass
@@ -440,9 +452,10 @@ class Main(object):
     
     
     def update_last_checked(self, isotime):
-        dt = dateutil.parser.parse(isotime)
-        self.last_checked_menu.set_label('Last checked: %s' % (dt.strftime('%H:%M'),))
-    
+        #dt = dateutil.parser.parse(isotime)
+        #self.last_checked_menu.set_label('Last checked: %s' % (dt.strftime('%H:%M'),))
+        pass
+        
     
     def update_last_seen_id(self, lsi):
         if lsi > self.last_seen_id:
@@ -474,7 +487,9 @@ class Main(object):
                     self.connected_nodes_submenu.remove(child)
 
                 for nid in self.nodes:
-                    if nid['id'] == self.system_data['myID']:
+                    if nid['id'] == self.system_data.get('myID', None):
+                        self.device_name = nid['name']
+                        self.update_title_menu()
                         continue
                         
                     mi = Gtk.MenuItem('%s   [%s]' % (nid['name'], nid['state'])) #add node name
@@ -486,6 +501,10 @@ class Main(object):
                     self.connected_nodes_submenu.append(mi)
                     mi.show()
         self.state['update_nodes'] = False
+
+
+    def update_title_menu(self):
+        self.title_menu.set_label('Syncthing {0} - {1}'.format(self.syncthing_version, self.device_name))
 
 
     def count_connected(self):
