@@ -89,18 +89,22 @@ class Main(object):
         self.syncthing_upgrade_menu.connect('activate', self.open_releases_page)
         self.menu.append(self.syncthing_upgrade_menu)
 
+        sep = Gtk.SeparatorMenuItem()
+        sep.show()
+        self.menu.append(sep)
+
+        open_web_ui = Gtk.MenuItem('Open web interface')
+        open_web_ui.connect('activate', self.open_web_ui)
+        open_web_ui.show()
+        self.menu.append(open_web_ui)
+
         self.more_menu = Gtk.MenuItem('More')
         self.more_menu.show()
         self.menu.append(self.more_menu)
         
         self.more_submenu = Gtk.Menu()
         self.more_menu.set_submenu(self.more_submenu)
-        
-        open_web_ui = Gtk.MenuItem('Open web interface')
-        open_web_ui.connect('activate', self.open_web_ui)
-        open_web_ui.show()
-        self.more_submenu.append(open_web_ui)
-        
+                
         restart_syncthing = Gtk.MenuItem('Restart Syncthing')
         restart_syncthing.connect('activate', self.restart)
         restart_syncthing.show()
