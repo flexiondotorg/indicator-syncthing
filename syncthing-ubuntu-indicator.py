@@ -110,12 +110,12 @@ class Main(object):
         restart_syncthing.show()
         self.more_submenu.append(restart_syncthing)
         
-        self.about_menu = Gtk.MenuItem('About')
+        self.about_menu = Gtk.MenuItem('About indicator')
         self.about_menu.connect('activate', self.show_about)
         self.about_menu.show()
         self.more_submenu.append(self.about_menu)
         
-        self.quit_button = Gtk.MenuItem('Quit')
+        self.quit_button = Gtk.MenuItem('Quit indicator')
         self.quit_button.connect('activate', self.leave)
         self.quit_button.show()
         self.more_submenu.append(self.quit_button)
