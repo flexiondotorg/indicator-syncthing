@@ -572,7 +572,7 @@ class Main(object):
         return old / (new * 10)
 
 
-    def license():
+    def license(self):
         with open('LICENSE', 'r') as f:
             license = f.read()
         return license
@@ -585,7 +585,7 @@ class Main(object):
         dialog.set_version('0.1.1')
         dialog.set_website('http://www.syncthing.net')
         dialog.set_comments('This menu applet for systems supporting AppIndicator can show the status of a syncthing instance')
-        dialog.set_license(license())
+        dialog.set_license(self.license())
         dialog.run()
         dialog.destroy()
 
