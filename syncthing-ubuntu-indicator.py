@@ -11,6 +11,7 @@ import urlparse
 import webbrowser
 
 import pytz
+from requests_futures.sessions import FuturesSession
 from gi.repository import Gtk, Gio, GLib
 from gi.repository import AppIndicator3 as appindicator
 from xml.dom import minidom
@@ -48,6 +49,8 @@ class Main(object):
         self.syncthing_version = ''
         self.device_name = ''
         self.last_seen_id = int(0)
+        
+        self.session = FuturesSession()
 
         GLib.idle_add(self.start_load_config)
         
@@ -236,14 +239,17 @@ class Main(object):
         # this is the connection command for the included testserver
         # f = Gio.file_new_for_uri('http://localhost:5115')
         if param == 'upgrade':
-            f = Gio.file_new_for_uri(self.syncthing('/rest/upgrade'))
-            f.load_contents_async(None, self.finish_upgrade_check)
+            f = self.session.get(self.syncthing('/rest/{0}?x-api-key={1}'.format(param, self.api_key)))
+            f.add_done_callback(self.finish_upgrade_check)
         elif param == 'events':
-            f = Gio.file_new_for_uri(self.syncthing('/rest/events?since=%s' % self.last_seen_id))
-            f.load_contents_async(None, self.fetch_poll)
-        elif param in ['connections', 'system']:
-            f = Gio.file_new_for_uri(self.syncthing('/rest/%s?x-api-key=%s' % (param, self.api_key)))
-            f.load_contents_async(None, self.fetch_rest, param)
+            f = self.session.get(self.syncthing('/rest/events?since={}'.format(self.last_seen_id)))
+            f.add_done_callback(self.fetch_poll)
+        elif param == 'connections':
+            f = self.session.get(self.syncthing('/rest/{0}?x-api-key={1}'.format(param, self.api_key)))
+            f.add_done_callback(self.fetch_rest_connections)
+        elif param == 'system':
+            f = self.session.get(self.syncthing('/rest/{0}?x-api-key={1}'.format(param, self.api_key)))
+            f.add_done_callback(self.fetch_rest_system)
         return False
 
 
@@ -252,13 +258,12 @@ class Main(object):
         GLib.timeout_add_seconds(600, self.query_rest, 'upgrade')
 
 
-    def finish_upgrade_check(self, fp, async_result):
-        try:
-            success, data, etag = fp.load_contents_finish(async_result)
-        except:
+    def finish_upgrade_check(self, future):
+        r = future.result()
+        if r.status_code != 200:
             return self.bail_releases('Request for upgrade check failed')
 
-        upgrade_data = json.loads(data)
+        upgrade_data = r.json()
         self.syncthing_version = upgrade_data['running']
         self.update_title_menu()
         
@@ -270,52 +275,68 @@ class Main(object):
         GLib.timeout_add_seconds(28800, self.query_rest, 'upgrade')
 
 
-    def fetch_rest(self, fp, async_result, param):
+    def fetch_rest_system(self, future):
+        param = 'system'
         log.debug('fetch_rest ' + param)
-        try:
-            success, data, etag = fp.load_contents_finish(async_result)
+        r = future.result()
+        if r.status_code == 200:
             GLib.timeout_add_seconds(TIMEOUT_REST, self.query_rest, param)
-            if success:
-                self.process_event({'type': 'rest_' + param, 'data': json.loads(data)})
-            else:
+            try:
+                self.process_event({'type': 'rest_' + param, 'data': r.json()})
+            except:
                 set_state('error')
                 log.error('fetch_rest: Scotty, we have a problem with REST: I cannot process the data')
-        except:
+        else:
             log.error('fetch_rest: Couldn\'t connect to syncthing (rest interface)')
-            GLib.timeout_add_seconds(15, self.query_rest, 'connections')
+            GLib.timeout_add_seconds(15, self.query_rest, param)
+            self.set_state('error')
+            
+            
+    def fetch_rest_connections(self, future):
+        param = 'connections'
+        log.debug('fetch_rest ' + param)
+        r = future.result()
+        if r.status_code == 200:
+            GLib.timeout_add_seconds(TIMEOUT_REST, self.query_rest, param)
+            try:
+                self.process_event({'type': 'rest_' + param, 'data': r.json()})
+            except:
+                set_state('error')
+                log.error('fetch_rest: Scotty, we have a problem with REST: I cannot process the data')
+        else:
+            log.error('fetch_rest: Couldn\'t connect to syncthing (rest interface)')
+            GLib.timeout_add_seconds(15, self.query_rest, param)
             self.set_state('error')
         
 
-    def fetch_poll(self, fp, async_result):
+    def fetch_poll(self, future):
         log.debug('fetch_poll')
-        try:
-            success, data, etag = fp.load_contents_finish(async_result)
+        r = future.result()
+        if r.status_code == 200:
             self.set_state('idle')
-        except:
-            log.error('fetch_poll: Couldn\'t connect to syncthing (event interface)')
-            log.exception('Logging an uncaught exception')
-            GLib.timeout_add_seconds(15, self.query_rest, 'events')
-            self.set_state( 'error')
-            # add a check if syncthing restarted here. for now it just resets the last_seen_id
-            self.last_seen_id = 0 #self.last_seen_id - 30
-            return
-
-        if success:
             try:
-                queue = json.loads(data)
+                queue = r.json()
                 for qitem in queue:
                     self.process_event(qitem)
             except ValueError:
                 log.warning('fetch_poll: request failed to parse json: error')
                 GLib.timeout_add_seconds(10, self.query_rest, 'events')
                 self.set_state('error')
- 
         else:
-            if datetime.datetime.now(pytz.utc).isoformat() > self.last_ping:
-                return
-            else:
-                log.error('fetch_poll: request failed')
-                self.set_state('error')
+            log.error('fetch_poll: Couldn\'t connect to syncthing (event interface)')
+            log.exception('Logging an uncaught exception')
+            GLib.timeout_add_seconds(15, self.query_rest, 'events')
+            self.set_state('error')
+            # add a check if syncthing restarted here. for now it just resets the last_seen_id
+            self.last_seen_id = 0 #self.last_seen_id - 30
+            return
+ 
+        #else:
+        #    if datetime.datetime.now(pytz.utc).isoformat() > self.last_ping:
+        #        return
+        #    else:
+        #        log.error('fetch_poll: request failed')
+        #        self.set_state('error')
                 
 #        ''' if self.downloading_files or self.uploading_files:
 #            self.set_state('update') 
