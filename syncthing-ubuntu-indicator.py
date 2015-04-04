@@ -92,7 +92,6 @@ class Main(object):
         self.repo_menu.set_submenu(self.repo_menu_submenu)
 
         self.current_files_menu = Gtk.MenuItem('Current files')
-        self.current_files_menu.show()
         self.menu.append(self.current_files_menu)
         self.current_files_submenu = Gtk.Menu()
         self.current_files_menu.set_submenu(self.current_files_submenu)
