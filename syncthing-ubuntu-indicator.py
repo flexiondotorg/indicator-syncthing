@@ -534,7 +534,7 @@ class Main(object):
                 for child in self.connected_devices_submenu.get_children():
                     self.connected_devices_submenu.remove(child)
 
-                for nid in self.devices:
+                for nid in sorted(self.devices, key=lambda nid: nid['name']):
                     if nid['id'] == self.system_data.get('myID', None):
                         self.device_name = nid['name']
                         self.update_title_menu()
