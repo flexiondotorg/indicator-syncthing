@@ -393,7 +393,7 @@ class Main(object):
         log.debug('a ping was sent at %s' % self.last_ping.strftime('%H:%M'))
 
 
-    def event_nodediscovered(self,event):
+    def event_devicediscovered(self, event):
         found = False
         for elm in self.nodes:
             if elm['id'] == event['data']['node']:
@@ -403,14 +403,14 @@ class Main(object):
             log.warn('unknown node discovered')
             self.nodes.append({ 
                 'id': event['data']['node'],
-                'name': 'new unkown node',
+                'name': 'new unknown node',
                 'address': event['data']['addrs'],
                 'state': 'unknown',
                 })
         self.state['update_nodes'] = True
 
 
-    def event_nodeconnected(self, event):
+    def event_deviceconnected(self, event):
         for elem in self.nodes:
             if event['data']['id'] == elem['id']:
                 elem['state'] = 'connected'
@@ -418,7 +418,7 @@ class Main(object):
         self.state['update_nodes'] = True
 
 
-    def event_nodedisconnected(self, event):
+    def event_devicedisconnected(self, event):
         for elem in self.nodes:
             if event['data']['id'] == elem['id']:
                 elem['state'] = 'disconnected'
