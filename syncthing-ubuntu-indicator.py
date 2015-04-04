@@ -258,7 +258,14 @@ class Main(object):
 
 
     def finish_upgrade_check(self, future):
-        r = future.result()
+        try:
+            r = future.result()
+        except:
+            log.error('finish_upgrade_check: Request for upgrade check failed')
+            self.set_state('error')
+            GLib.timeout_add_seconds(15, self.query_rest, 'upgrade')
+            return
+            
         if r.status_code != 200:
             return self.bail_releases('Request for upgrade check failed')
 
@@ -277,13 +284,20 @@ class Main(object):
     def fetch_rest_system(self, future):
         param = 'system'
         log.debug('fetch_rest ' + param)
-        r = future.result()
+        try:
+            r = future.result()
+        except:
+            log.error('fetch_rest: Couldn\'t connect to syncthing (rest interface)')
+            GLib.timeout_add_seconds(15, self.query_rest, param)
+            self.set_state('error')
+            return
+            
         if r.status_code == 200:
             GLib.timeout_add_seconds(TIMEOUT_REST, self.query_rest, param)
             try:
                 self.process_event({'type': 'rest_' + param, 'data': r.json()})
             except:
-                set_state('error')
+                self.set_state('error')
                 log.error('fetch_rest: Scotty, we have a problem with REST: I cannot process the data')
         else:
             log.error('fetch_rest: Couldn\'t connect to syncthing (rest interface)')
@@ -294,7 +308,14 @@ class Main(object):
     def fetch_rest_connections(self, future):
         param = 'connections'
         log.debug('fetch_rest ' + param)
-        r = future.result()
+        try:
+            r = future.result()
+        except:
+            log.error('fetch_rest_connections: Couldn\'t connect to syncthing (rest interface)')
+            GLib.timeout_add_seconds(15, self.query_rest, 'connections')
+            self.set_state('error')
+            return
+            
         if r.status_code == 200:
             GLib.timeout_add_seconds(TIMEOUT_REST, self.query_rest, param)
             try:
@@ -310,7 +331,14 @@ class Main(object):
 
     def fetch_poll(self, future):
         log.debug('fetch_poll')
-        r = future.result()
+        try:
+            r = future.result()
+        except:
+            log.error('fetch_poll: Couldn\'t connect to syncthing (rest interface)')
+            GLib.timeout_add_seconds(15, self.query_rest, 'events')
+            self.set_state('error')
+            return
+            
         if r.status_code == 200:
             self.set_state('idle')
             try:
@@ -490,7 +518,7 @@ class Main(object):
         else:
             self.connected_devices_menu.set_sensitive(True)
             
-            if len(self.devices) == len(self.connected_devices_submenu):
+            if len(self.devices) == len(self.connected_devices_submenu) + 1:
                 # this updates the connected devices menu
                 for mi in self.connected_devices_submenu:
                     for elm in self.devices:
