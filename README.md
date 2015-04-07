@@ -2,9 +2,9 @@ syncthing-ubuntu-indicator
 ==========================
 
 A [Syncthing] status menu for Ubuntu,
-using Syncthings event interface to display informations about what's going on.
+using Syncthing's event interface to display informations about what's going on.
 
-This is a fork from Stuart Langridges [syncthing-ubuntu-indicator].
+This is a fork from Stuart Langridge's [syncthing-ubuntu-indicator].
 
 The project is in an early stage and contributions are welcome.
 
@@ -15,7 +15,7 @@ dependencies
 * python2 gtk 
 * python-dateutil (python2 version)
 * python-tz (python2 version)
-
+* requests-futures (python2 version)
 
 
 (I'm running Arch Linux so somebody maybe can fill the dependencies for other distributions, if there are some?)
@@ -29,16 +29,16 @@ in a directory of your choice:
   
     cd syncthing-ubuntu-indicator
   
-    ./syncthing-ubuntu-indicator.sh
+    python2 ./syncthing-ubuntu-indicator.py
 
 When you are using GNOME3 you can move the icon with the [gnome-shell-extension-appindicator] in the upper notification bar. 
 
 
-_On Ubuntu 14.02:_
+_On Ubuntu 14.04:_
 
     sudo apt-get install python-pip python-tz 
   
-    sudo pip install python-dateutil
+    sudo pip install python-dateutil requests-futures
 
   this should result in the installation of the following packages:
   * python-colorama
