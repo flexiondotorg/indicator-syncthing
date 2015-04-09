@@ -531,12 +531,9 @@ class Main(object):
                 # this updates the connected devices menu
                 for mi in self.connected_devices_submenu:
                     for elm in self.devices:
-                        if str(mi.get_label()).split(' ', 1)[0] == elm['name']:
-                            mi.set_label('%s   [%s]' % (elm['name'], elm['state']))
-                            if elm['state'] == ('connected'):
-                                mi.set_sensitive(True)
-                            else:
-                                mi.set_sensitive(False)
+                        if mi.get_label() == elm['name']:
+                            mi.set_label(elm['name'])
+                            mi.set_sensitive(elm['state'] == 'connected')
 
             else:
                 # this populates the connected devices menu with devices from config
@@ -549,12 +546,8 @@ class Main(object):
                         self.update_title_menu()
                         continue
 
-                    mi = Gtk.MenuItem('%s   [%s]' % (nid['name'], nid['state'])) #add device name
-
-                    if nid['state'] == 'connected':
-                        mi.set_sensitive(True)
-                    else:
-                        mi.set_sensitive(False)
+                    mi = Gtk.MenuItem(nid['name'])
+                    mi.set_sensitive(nid['state'] == 'connected')
                     self.connected_devices_submenu.append(mi)
                     mi.show()
         self.state['update_devices'] = False
