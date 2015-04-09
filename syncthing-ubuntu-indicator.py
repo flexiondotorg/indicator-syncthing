@@ -7,6 +7,7 @@ import dateutil.parser
 import json
 import logging as log
 import os
+import sys
 import urlparse
 import webbrowser
 
@@ -17,10 +18,6 @@ from gi.repository import AppIndicator3 as appindicator
 from xml.dom import minidom
 
 VERSION = 'v0.2.1'
-
-TIMEOUT_EVENT = 5
-TIMEOUT_REST = 30
-TIMEOUT_GUI = 5
 
 class Main(object):
     def __init__(self):
@@ -728,7 +725,7 @@ class Main(object):
 
 
     def leave(self, widget):
-        exit()
+        sys.exit()
 
 
 
@@ -738,6 +735,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel', choices=['debug', 'info', 'error'], default='info')
+    parser.add_argument('--timeout-event', type=int, default=5)
+    parser.add_argument('--timeout-rest', type=int, default=30)
+    parser.add_argument('--timeout-gui', type=int, default=5)
+
     args = parser.parse_args()
     if args.loglevel == 'debug':
         loglevel = log.DEBUG
@@ -745,6 +746,12 @@ if __name__ == '__main__':
         loglevel = log.INFO
     elif args.loglevel == 'error':
         loglevel = log.ERROR
+    for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
+        if arg < 1:
+            sys.exit('Timeouts must be integers greater than 0')
+    TIMEOUT_EVENT = args.timeout_event
+    TIMEOUT_REST = args.timeout_rest
+    TIMEOUT_GUI = args.timeout_gui
 
     # setup debugging:
     log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevel)
