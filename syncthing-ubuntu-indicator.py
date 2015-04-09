@@ -22,13 +22,13 @@ VERSION = 'v0.2.1'
 class Main(object):
     def __init__(self):
         log.info('Started main procedure')
-        icon_path = os.path.normpath(os.path.abspath(os.path.split(__file__)[0]))
-        icon_path = os.path.join(icon_path, 'icons')
+        self.wd = os.path.normpath(os.path.abspath(os.path.split(__file__)[0]))
+        self.icon_path = os.path.join(self.wd, 'icons')
         self.ind = appindicator.Indicator.new_with_path(
                             'syncthing-indicator',
                             'syncthing-client-idle',
                             appindicator.IndicatorCategory.APPLICATION_STATUS,
-                            icon_path)
+                            self.icon_path)
         self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
 
         self.state = {'update_folders': True, 'update_devices': True, 'update_files': True, 'set_icon': 'idle'}
@@ -651,6 +651,7 @@ class Main(object):
 
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
+        dialog.set_default_icon_from_file(os.path.join(self.icon_path, 'syncthing-client-idle.svg'))
         dialog.set_logo(None)
         dialog.set_program_name('Syncthing Ubuntu Indicator')
         dialog.set_version(VERSION)
