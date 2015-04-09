@@ -33,11 +33,11 @@ class Main(object):
                             appindicator.IndicatorCategory.APPLICATION_STATUS,
                             icon_path)
         self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
-        
+
         self.state = {'update_folders': True, 'update_devices': True, 'update_files': True, 'set_icon': 'idle'}
         self.set_icon()
         self.create_menu()
-        
+
         self.downloading_files = []
         self.uploading_files = []
         self.recent_files = []
@@ -49,21 +49,21 @@ class Main(object):
         self.syncthing_version = ''
         self.device_name = ''
         self.last_seen_id = int(0)
-        
+
         self.session = FuturesSession()
 
         GLib.idle_add(self.start_load_config)
-        
+
 
     def create_menu(self):
         self.menu = Gtk.Menu()
-        
+
         #self.last_checked_menu = Gtk.MenuItem('Last checked: ?')
         #self.last_checked_menu.show()
         #self.last_checked_menu.set_sensitive(False)
         #self.menu.append(self.last_checked_menu)
         #self.update_last_checked(datetime.datetime.now(pytz.utc).isoformat())
-        
+
         self.title_menu = Gtk.MenuItem('Syncthing')
         self.title_menu.show()
         self.title_menu.set_sensitive(False)
@@ -76,14 +76,14 @@ class Main(object):
         sep = Gtk.SeparatorMenuItem()
         sep.show()
         self.menu.append(sep)
-        
+
         self.connected_devices_menu = Gtk.MenuItem('Devices')
         self.connected_devices_menu.show()
         self.connected_devices_menu.set_sensitive(False)
         self.menu.append(self.connected_devices_menu)
         self.connected_devices_submenu = Gtk.Menu()
         self.connected_devices_menu.set_submenu(self.connected_devices_submenu)
-        
+
         self.folder_menu = Gtk.MenuItem('Folders')
         self.folder_menu.show()
         self.folder_menu.set_sensitive(False)
@@ -113,20 +113,20 @@ class Main(object):
         self.more_menu = Gtk.MenuItem('More')
         self.more_menu.show()
         self.menu.append(self.more_menu)
-        
+
         self.more_submenu = Gtk.Menu()
         self.more_menu.set_submenu(self.more_submenu)
-                
+
         restart_syncthing = Gtk.MenuItem('Restart Syncthing')
         restart_syncthing.connect('activate', self.restart)
         restart_syncthing.show()
         self.more_submenu.append(restart_syncthing)
-        
+
         self.about_menu = Gtk.MenuItem('About Indicator')
         self.about_menu.connect('activate', self.show_about)
         self.about_menu.show()
         self.more_submenu.append(self.about_menu)
-        
+
         self.quit_button = Gtk.MenuItem('Quit Indicator')
         self.quit_button.connect('activate', self.leave)
         self.quit_button.show()
@@ -148,7 +148,7 @@ class Main(object):
         f.load_contents_async(None, self.finish_load_config)
         return False
 
-    
+
     def finish_load_config(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
@@ -167,7 +167,7 @@ class Main(object):
         gui = conf[0].getElementsByTagName('gui')
         if not gui:
             return self.bail_releases('No gui element in config')
-        
+
         # find the local syncthing address
         address = gui[0].getElementsByTagName('address')
         if not address:
@@ -176,7 +176,7 @@ class Main(object):
             return self.bail_releases('No address specified in config')
 
         self.syncthing_base = 'http://%s' % address[0].firstChild.nodeValue
-        
+
         # find and fetch the api key
         api_key = gui[0].getElementsByTagName('apikey')
         if not api_key:
@@ -184,7 +184,7 @@ class Main(object):
         if not api_key[0].hasChildNodes():
             return self.bail_releases('No api-key specified in config, please create one via the web interface')
         self.api_key = api_key[0].firstChild.nodeValue
-        
+
         # read device names from config
         deviceids = conf[0].getElementsByTagName('device')
         try:
@@ -195,10 +195,10 @@ class Main(object):
                         'name': elem.getAttribute('name'),
                         'compression': elem.getAttribute('compression'),
                         'state': 'disconnected',
-                        })                    
+                        })
         except:
             self.bail_releases('config has no devices configured')
-                
+
         # read folders from config
         folders = conf[0].getElementsByTagName('folder')
         try:
@@ -211,15 +211,15 @@ class Main(object):
                         })
         except:
             self.bail_releases('config has no folders configured')
-        
+
         # Start processes
         GLib.idle_add(self.query_rest, 'events')
         GLib.idle_add(self.query_rest, 'connections')
         GLib.idle_add(self.query_rest, 'upgrade')
         GLib.idle_add(self.query_rest, 'system')
         GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
-     
-     
+
+
     def syncthing(self, url):
         ''' creates a url from given values and the address read from file '''
         return urlparse.urljoin(self.syncthing_base, url)
@@ -265,14 +265,14 @@ class Main(object):
             self.set_state('error')
             GLib.timeout_add_seconds(15, self.query_rest, 'upgrade')
             return
-            
+
         if r.status_code != 200:
             return self.bail_releases('Request for upgrade check failed')
 
         upgrade_data = r.json()
         self.syncthing_version = upgrade_data['running']
         self.update_title_menu()
-        
+
         if upgrade_data['newer']:
             self.syncthing_upgrade_menu.set_label('New version {} available!'.format(upgrade_data['latest']))
             self.syncthing_upgrade_menu.show()
@@ -291,7 +291,7 @@ class Main(object):
             GLib.timeout_add_seconds(15, self.query_rest, param)
             self.set_state('error')
             return
-            
+
         if r.status_code == 200:
             GLib.timeout_add_seconds(TIMEOUT_REST, self.query_rest, param)
             try:
@@ -303,8 +303,8 @@ class Main(object):
             log.error('fetch_rest: Couldn\'t connect to syncthing (rest interface)')
             GLib.timeout_add_seconds(15, self.query_rest, param)
             self.set_state('error')
-            
-            
+
+
     def fetch_rest_connections(self, future):
         param = 'connections'
         log.debug('fetch_rest ' + param)
@@ -315,7 +315,7 @@ class Main(object):
             GLib.timeout_add_seconds(15, self.query_rest, 'connections')
             self.set_state('error')
             return
-            
+
         if r.status_code == 200:
             GLib.timeout_add_seconds(TIMEOUT_REST, self.query_rest, param)
             try:
@@ -327,7 +327,7 @@ class Main(object):
             log.error('fetch_rest: Couldn\'t connect to syncthing (rest interface)')
             GLib.timeout_add_seconds(15, self.query_rest, param)
             self.set_state('error')
-        
+
 
     def fetch_poll(self, future):
         log.debug('fetch_poll')
@@ -338,7 +338,7 @@ class Main(object):
             GLib.timeout_add_seconds(15, self.query_rest, 'events')
             self.set_state('error')
             return
-            
+
         if r.status_code == 200:
             self.set_state('idle')
             try:
@@ -357,24 +357,24 @@ class Main(object):
             # add a check if syncthing restarted here. for now it just resets the last_seen_id
             self.last_seen_id = 0 #self.last_seen_id - 30
             return
- 
+
         #else:
         #    if datetime.datetime.now(pytz.utc).isoformat() > self.last_ping:
         #        return
         #    else:
         #        log.error('fetch_poll: request failed')
         #        self.set_state('error')
-                
+
 #        ''' if self.downloading_files or self.uploading_files:
-#            self.set_state('update') 
+#            self.set_state('update')
 #                    #'Updating %s files' % (
 #                    #len(self.downloading_files) + len(self.uploading_files)))
 #        #else:
 #            #self.set_state('idle')
 #            '''
         GLib.timeout_add_seconds(TIMEOUT_EVENT, self.query_rest, 'events')
-   
-    
+
+
     # processing of the events coming from the event interface
     def process_event(self, event):
         log.debug('processing event %s' % event.get('type'))
@@ -398,8 +398,8 @@ class Main(object):
                 elem['state'] = event['data']['to']
                 self.state['update_folders']=True
         self.set_state()
-        
-        
+
+
     def event_remoteindexupdated(self,event):
         pass
 
@@ -413,8 +413,8 @@ class Main(object):
         self.set_state('idle')
         time = self.convert_time(event['time'])
         log.debug('startup done at %s' % time)
-    
-    
+
+
     def event_ping(self,event):
         self.last_ping = dateutil.parser.parse(event['time'])
         log.debug('a ping was sent at %s' % self.last_ping.strftime('%H:%M'))
@@ -428,7 +428,7 @@ class Main(object):
                 found = True
         if found == False:
             log.warn('unknown device discovered')
-            self.devices.append({ 
+            self.devices.append({
                 'id': event['data']['device'],
                 'name': 'new unknown device',
                 'address': event['data']['addrs'],
@@ -451,8 +451,8 @@ class Main(object):
                 elem['state'] = 'disconnected'
                 log.debug('device %s disconnected' % elem['name'])
         self.state['update_devices'] = True
-        
-        
+
+
     def event_itemstarted(self, event):
         log.debug('item started', event)
         file_details = {'folder': event['data']['folder'], 'file': event['data']['item'], 'direction': 'down'}
@@ -472,16 +472,16 @@ class Main(object):
             log.debug('file locally updated %s' % file_details['file'])
         except ValueError:
             log.debug ('Completed a file %s which we didn\'t know about' % event['data']['name'])
-        
+
         self.recent_files.append({
-            'file': event['data']['name'], 
+            'file': event['data']['name'],
             'direction': 'down',
             'time': event['data']['modified'],
-            })  
-        self.recent_files = self.recent_files[-5:] 
+            })
+        self.recent_files = self.recent_files[-5:]
         self.state['update_files'] = True
-    
-    
+
+
     def event_rest_connections(self, event):
         for elem in event['data'].iterkeys():
             if elem != 'total':
@@ -495,16 +495,16 @@ class Main(object):
     def event_rest_system(self, event):
         log.debug('event_rest_system got system info')
         self.system_data = event['data']
-        
+
     # end of the event processing dings
-    
-    
+
+
     def update_last_checked(self, isotime):
         #dt = dateutil.parser.parse(isotime)
         #self.last_checked_menu.set_label('Last checked: %s' % (dt.strftime('%H:%M'),))
         pass
-        
-    
+
+
     def update_last_seen_id(self, lsi):
         if lsi > self.last_seen_id:
             self.last_seen_id = lsi
@@ -517,18 +517,18 @@ class Main(object):
             self.connected_devices_menu.set_sensitive(False)
         else:
             self.connected_devices_menu.set_sensitive(True)
-            
+
             if len(self.devices) == len(self.connected_devices_submenu) + 1:
                 # this updates the connected devices menu
                 for mi in self.connected_devices_submenu:
                     for elm in self.devices:
                         if str(mi.get_label()).split(' ', 1)[0] == elm['name']:
-                            mi.set_label('%s   [%s]' % (elm['name'], elm['state'])) 
+                            mi.set_label('%s   [%s]' % (elm['name'], elm['state']))
                             if elm['state'] == ('connected'):
                                 mi.set_sensitive(True)
                             else:
                                 mi.set_sensitive(False)
-            
+
             else:
                 # this populates the connected devices menu with devices from config
                 for child in self.connected_devices_submenu.get_children():
@@ -539,9 +539,9 @@ class Main(object):
                         self.device_name = nid['name']
                         self.update_title_menu()
                         continue
-                        
+
                     mi = Gtk.MenuItem('%s   [%s]' % (nid['name'], nid['state'])) #add device name
-                    
+
                     if nid['state'] == 'connected':
                         mi.set_sensitive(True)
                     else:
@@ -556,23 +556,23 @@ class Main(object):
 
 
     def count_connected(self):
-        return len([e for e in self.devices if e['state'] == 'connected']) 
-     
-     
+        return len([e for e in self.devices if e['state'] == 'connected'])
+
+
     def restart(self, *args):
         self.start_rest('restart')
-        
-        
+
+
     def convert_time(self, time):
         time = dateutil.parser.parse(time)
         time = time.strftime('%d.%m. %H:%M')
         return time
-        
-        
+
+
     def update_files(self):
         self.current_files_menu.set_label(u'Syncing \u21d1 %s  \u21d3 %s' % (
             len(self.uploading_files), len(self.downloading_files)))
-            
+
         if (len(self.uploading_files), len(self.downloading_files)) == (0,0):
             self.current_files_menu.hide()
             #self.set_state('idle')
@@ -604,20 +604,20 @@ class Main(object):
                 mi.show()
             self.recent_files_menu.show()
         self.state['update_files'] = False
-   
-   
+
+
     def update_folders(self):
         ''' this populates the folders menu with folders from config '''
         if len(self.folders) == 0 :
             self.folder_menu.set_sensitive(False)
         else:
             self.folder_menu.set_sensitive(True)
-            
+
             if len(self.folders) == len(self.folder_menu_submenu):
                 for mi in self.folder_menu_submenu:
                     for elm in self.folders:
                         if str(mi.get_label()).split(' ', 1)[0] == elm['folder']:
-                            mi.set_label('%s   [%s]' % (elm['folder'], elm['state'])) 
+                            mi.set_label('%s   [%s]' % (elm['folder'], elm['state']))
                             if elm['state'] == ('idle' or 'scanning' or 'syncing'):
                                 mi.set_sensitive(True)
                             else:
@@ -625,18 +625,18 @@ class Main(object):
             else:
                 for child in self.folder_menu_submenu.get_children():
                     self.folder_menu_submenu.remove(child)
-    
+
                 for rid in self.folders:
                     mi = Gtk.MenuItem('%s   [%s]' % (rid['folder'], rid['state'])) # add device name
                     self.folder_menu_submenu.append(mi)
                     mi.show()
         self.state['update_folders'] = False
-  
-  
+
+
     def update_system_information(self): # to do
         pass
-    
-    
+
+
     def calc_speed(self,old,new):
         return old / (new * 10)
 
@@ -679,8 +679,8 @@ class Main(object):
                 self.state['set_icon'] = rc
             else:
                 self.state['set_icon'] = s
-    
-    
+
+
     def folder_check_state(self):
         state = {'syncing': 0, 'idle': 0, 'cleaning': 0, 'scanning': 0, 'unknown': 0}
         for elem in self.folders:
@@ -705,7 +705,7 @@ class Main(object):
         'scanning': {'name': 'syncthing-client-scanning', 'descr': 'Scanning Directories'},
         'cleaning': {'name': 'syncthing-client-scanning', 'descr': 'Cleaning Directories'},
         }
-        
+
         self.ind.set_attention_icon(icon[self.state['set_icon'] ]['name'])
         self.ind.set_icon_full(icon[self.state['set_icon']]['name'], icon[self.state['set_icon']]['descr'])
         #GLib.timeout_add_seconds(1, self.set_icon)
@@ -719,7 +719,7 @@ class Main(object):
 if __name__ == '__main__':
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel', choices=['debug', 'info', 'error'], default='info')
     args = parser.parse_args()
@@ -729,10 +729,10 @@ if __name__ == '__main__':
         loglevel = log.INFO
     elif args.loglevel == 'error':
         loglevel = log.ERROR
-    
+
     # setup debugging:
     log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevel)
-    
+
     app = Main()
     Gtk.main()
 
