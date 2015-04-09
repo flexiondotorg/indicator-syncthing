@@ -117,10 +117,19 @@ class Main(object):
         self.more_submenu = Gtk.Menu()
         self.more_menu.set_submenu(self.more_submenu)
 
-        restart_syncthing = Gtk.MenuItem('Restart Syncthing')
-        restart_syncthing.connect('activate', self.restart)
-        restart_syncthing.show()
-        self.more_submenu.append(restart_syncthing)
+        mi_restart_syncthing = Gtk.MenuItem('Restart Syncthing')
+        mi_restart_syncthing.connect('activate', self.syncthing_restart)
+        mi_restart_syncthing.show()
+        self.more_submenu.append(mi_restart_syncthing)
+
+        mi_shutdown_syncthing = Gtk.MenuItem('Shutdown Syncthing')
+        mi_shutdown_syncthing.connect('activate', self.syncthing_shutdown)
+        mi_shutdown_syncthing.show()
+        self.more_submenu.append(mi_shutdown_syncthing)
+
+        sep = Gtk.SeparatorMenuItem()
+        sep.show()
+        self.more_submenu.append(sep)
 
         self.about_menu = Gtk.MenuItem('About Indicator')
         self.about_menu.connect('activate', self.show_about)
@@ -237,18 +246,21 @@ class Main(object):
         log.debug('query_rest {}'.format(param))
         # this is the connection command for the included testserver
         # f = Gio.file_new_for_uri('http://localhost:5115')
+        headers = {'X-API-Key': self.api_key}
         if param == 'upgrade':
-            f = self.session.get(self.syncthing('/rest/{0}?x-api-key={1}'.format(param, self.api_key)))
+            f = self.session.get(self.syncthing('/rest/{}'.format(param)), headers=headers)
             f.add_done_callback(self.finish_upgrade_check)
         elif param == 'events':
-            f = self.session.get(self.syncthing('/rest/events?since={}'.format(self.last_seen_id)))
+            f = self.session.get(self.syncthing('/rest/events?since={}'.format(self.last_seen_id)), headers=headers)
             f.add_done_callback(self.fetch_poll)
         elif param == 'connections':
-            f = self.session.get(self.syncthing('/rest/{0}?x-api-key={1}'.format(param, self.api_key)))
+            f = self.session.get(self.syncthing('/rest/{}'.format(param)), headers=headers)
             f.add_done_callback(self.fetch_rest_connections)
         elif param == 'system':
-            f = self.session.get(self.syncthing('/rest/{0}?x-api-key={1}'.format(param, self.api_key)))
+            f = self.session.get(self.syncthing('/rest/{}'.format(param)), headers=headers)
             f.add_done_callback(self.fetch_rest_system)
+        elif param in ['restart', 'shutdown']:
+            f = self.session.post(self.syncthing('/rest/{}'.format(param)), headers=headers)
         return False
 
 
@@ -559,8 +571,12 @@ class Main(object):
         return len([e for e in self.devices if e['state'] == 'connected'])
 
 
-    def restart(self, *args):
-        self.start_rest('restart')
+    def syncthing_restart(self, *args):
+        self.query_rest('restart')
+
+
+    def syncthing_shutdown(self, *args):
+        self.query_rest('shutdown')
 
 
     def convert_time(self, time):
