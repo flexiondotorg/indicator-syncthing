@@ -228,7 +228,7 @@ class Main(object):
                 if elem.hasAttribute('id') and elem.hasAttribute('path'):
                     self.folders.append({
                         'folder': elem.getAttribute('id'),
-                        'directory':  elem.getAttribute('path'),
+                        'directory': elem.getAttribute('path'),
                         'state': 'unknown',
                         })
         except:
@@ -664,11 +664,7 @@ class Main(object):
         if s == 'error':
             self.state['set_icon'] = s
         else:
-            rc = self.folder_check_state()
-            if rc != 'unknown':
-                self.state['set_icon'] = rc
-            else:
-                self.state['set_icon'] = s
+            self.state['set_icon'] = self.folder_check_state()
 
 
     def folder_check_state(self):
@@ -678,11 +674,10 @@ class Main(object):
 
         if state['syncing'] > 0:
             return 'syncing'
+        elif state['scanning'] > 0 or state['cleaning'] > 0:
+            return 'scanning'
         else:
-            if state['scanning'] > 0 or state['cleaning'] > 0:
-                return 'scanning'
-            else:
-                return 'idle'
+            return 'idle'
 
 
     def set_icon(self):
