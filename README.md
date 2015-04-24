@@ -1,8 +1,10 @@
 syncthing-ubuntu-indicator
 ==========================
 
-A [Syncthing] status menu for Ubuntu,
-using Syncthing's event interface to display informations about what's going on.
+A [Syncthing] status menu for systems that support AppIndicator,
+using Syncthing's event interface to display information about what's going on.
+
+Syncthing v0.11.0 and higher are supported.
 
 This is a fork from Stuart Langridge's [syncthing-ubuntu-indicator].
 
