@@ -487,6 +487,14 @@ class Main(object):
     # end of the REST processing functions
 
 
+    def update(self):
+        for func in self.state:
+            if self.state[func]:
+                log.debug('self.update {}'.format(func))
+                start = getattr(self, '%s' % func)()
+        return True
+
+
     def update_last_checked(self, isotime):
         #dt = dateutil.parser.parse(isotime)
         #self.last_checked_menu.set_label('Last checked: %s' % (dt.strftime('%H:%M'),))
@@ -532,27 +540,6 @@ class Main(object):
                     self.connected_devices_submenu.append(mi)
                     mi.show()
         self.state['update_devices'] = False
-
-
-    def update_title_menu(self):
-        self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
-            self.syncthing_version, self.device_name))
-
-
-    def count_connected(self):
-        return len([e for e in self.devices if e['state'] == 'connected'])
-
-
-    def syncthing_restart(self, *args):
-        self.rest_post('/rest/system/restart')
-
-
-    def syncthing_shutdown(self, *args):
-        self.rest_post('/rest/system/shutdown')
-
-
-    def convert_time(self, time):
-        return dateutil.parser.parse(time).strftime('%x %X')
 
 
     def update_files(self):
@@ -626,6 +613,27 @@ class Main(object):
         self.state['update_folders'] = False
 
 
+    def update_title_menu(self):
+        self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
+            self.syncthing_version, self.device_name))
+
+
+    def count_connected(self):
+        return len([e for e in self.devices if e['state'] == 'connected'])
+
+
+    def syncthing_restart(self, *args):
+        self.rest_post('/rest/system/restart')
+
+
+    def syncthing_shutdown(self, *args):
+        self.rest_post('/rest/system/shutdown')
+
+
+    def convert_time(self, time):
+        return dateutil.parser.parse(time).strftime('%x %X')
+
+
     def calc_speed(self, old, new):
         return old / (new * 10)
 
@@ -647,14 +655,6 @@ class Main(object):
         dialog.set_license(self.license())
         dialog.run()
         dialog.destroy()
-
-
-    def update(self):
-        for func in self.state:
-            if self.state[func]:
-                log.debug('self.update {}'.format(func))
-                start = getattr(self, '%s' % func)()
-        return True
 
 
     def set_state(self, s=None):
