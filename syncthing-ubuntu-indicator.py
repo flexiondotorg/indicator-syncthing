@@ -260,6 +260,14 @@ class Main(object):
         webbrowser.open('https://github.com/syncthing/syncthing/releases')
 
 
+    def rest_post(self, rest_path):
+        log.debug('rest_post {}'.format(rest_path))
+        headers = {'X-API-Key': self.api_key}
+        if rest_path in ['/rest/system/restart', '/rest/system/shutdown']:
+            f = self.session.post(self.syncthing_url(rest_path), headers=headers)
+        return False
+
+
     def rest_get(self, rest_path):
         log.debug('rest_get {}'.format(rest_path))
         # url for the included testserver: http://localhost:5115
@@ -695,14 +703,6 @@ class Main(object):
 
     def leave(self, widget):
         Gtk.main_quit()
-
-
-    def rest_post(self, rest_path):
-        log.debug('rest_post {}'.format(rest_path))
-        headers = {'X-API-Key': self.api_key}
-        if rest_path in ['/rest/system/restart', '/rest/system/shutdown']:
-            f = self.session.post(self.syncthing_url(rest_path), headers=headers)
-        return False
 
 
     def timeout_rest(self):
