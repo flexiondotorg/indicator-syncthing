@@ -621,19 +621,22 @@ class Main(object):
             self.folder_menu.set_sensitive(False)
         else:
             self.folder_menu.set_sensitive(True)
+            folder_maxlength = 0
             if len(self.folders) == len(self.folder_menu_submenu):
                 for mi in self.folder_menu_submenu:
                     for elm in self.folders:
+                        folder_maxlength = max(folder_maxlength, len(elm['id']))
                         if str(mi.get_label()).split(' ', 1)[0] == elm['id']:
                             if elm['state'] in ['scanning', 'syncing']:
                                 mi.set_label('{0}   ({1})'.format(elm['id'], elm['state']))
                             else:
-                                mi.set_label(elm['id'])
+                                mi.set_label(elm['id'].ljust(folder_maxlength + 20))
             else:
                 for child in self.folder_menu_submenu.get_children():
                     self.folder_menu_submenu.remove(child)
                 for elm in self.folders:
-                    mi = Gtk.MenuItem(elm['id'])
+                    folder_maxlength = max(folder_maxlength, len(elm['id']))
+                    mi = Gtk.MenuItem(elm['id'].ljust(folder_maxlength + 20))
                     self.folder_menu_submenu.append(mi)
                     mi.show()
         self.state['update_folders'] = False
