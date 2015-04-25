@@ -7,6 +7,7 @@ import dateutil.parser
 import json
 import logging as log
 import os
+import subprocess
 import sys
 import urlparse
 import webbrowser
@@ -35,7 +36,7 @@ class Main(object):
         self.state = {'update_folders': True,
                       'update_devices': True,
                       'update_files': True,
-                      'update_title_menu': False,
+                      'update_st_running': False,
                       'set_icon': 'idle'}
         self.set_icon()
         self.create_menu()
@@ -126,15 +127,23 @@ class Main(object):
         self.more_submenu = Gtk.Menu()
         self.more_menu.set_submenu(self.more_submenu)
 
-        mi_restart_syncthing = Gtk.MenuItem('Restart Syncthing')
-        mi_restart_syncthing.connect('activate', self.syncthing_restart)
-        mi_restart_syncthing.show()
-        self.more_submenu.append(mi_restart_syncthing)
+        self.mi_start_syncthing = Gtk.MenuItem('Start Syncthing')
+        self.mi_start_syncthing.connect('activate', self.syncthing_start)
+        self.mi_start_syncthing.set_sensitive(False)
+        self.mi_start_syncthing.show()
+        self.more_submenu.append(self.mi_start_syncthing)
 
-        mi_shutdown_syncthing = Gtk.MenuItem('Shutdown Syncthing')
-        mi_shutdown_syncthing.connect('activate', self.syncthing_shutdown)
-        mi_shutdown_syncthing.show()
-        self.more_submenu.append(mi_shutdown_syncthing)
+        self.mi_restart_syncthing = Gtk.MenuItem('Restart Syncthing')
+        self.mi_restart_syncthing.connect('activate', self.syncthing_restart)
+        self.mi_restart_syncthing.set_sensitive(False)
+        self.mi_restart_syncthing.show()
+        self.more_submenu.append(self.mi_restart_syncthing)
+
+        self.mi_shutdown_syncthing = Gtk.MenuItem('Shutdown Syncthing')
+        self.mi_shutdown_syncthing.connect('activate', self.syncthing_shutdown)
+        self.mi_shutdown_syncthing.set_sensitive(False)
+        self.mi_shutdown_syncthing.show()
+        self.more_submenu.append(self.mi_shutdown_syncthing)
 
         sep = Gtk.SeparatorMenuItem()
         sep.show()
@@ -295,6 +304,7 @@ class Main(object):
             log.error("Couldn't connect to Syncthing REST interface at {}".format(
                 self.syncthing_url('')))
             self.rest_connected = False
+            self.state['update_st_running'] = True
             if self.ping_counter > 1:
                 self.set_state('error')
             return
@@ -458,7 +468,7 @@ class Main(object):
 
     def process_rest_system_status(self, data):
         self.system_data = data
-        self.state['update_title_menu'] = True
+        self.state['update_st_running'] = True
 
 
     def process_rest_system_upgrade(self, data):
@@ -472,7 +482,7 @@ class Main(object):
 
     def process_rest_system_version(self, data):
         self.syncthing_version = data['version']
-        self.state['update_title_menu'] = True
+        self.state['update_st_running'] = True
 
 
     def process_rest_system_ping(self, data):
@@ -519,8 +529,9 @@ class Main(object):
     def update_last_seen_id(self, lsi):
         if lsi > self.last_seen_id:
             self.last_seen_id = lsi
-        else:
-            log.warning('received event id less than last_seen_id')
+        elif lsi < self.last_seen_id:
+            log.warning('received event id {} less than last_seen_id {}'.format(
+                lsi, self.last_seen_id))
 
 
     def update_devices(self):
@@ -547,7 +558,7 @@ class Main(object):
                 for nid in sorted(self.devices, key=lambda nid: nid['name']):
                     if nid['id'] == self.system_data.get('myID', None):
                         self.device_name = nid['name']
-                        self.update_title_menu()
+                        self.state['update_st_running'] = True
                         continue
 
                     mi = Gtk.MenuItem(nid['name'])
@@ -628,21 +639,44 @@ class Main(object):
         self.state['update_folders'] = False
 
 
-    def update_title_menu(self):
-        self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
-            self.syncthing_version, self.device_name))
+    def update_st_running(self):
+        if self.rest_connected:
+            self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
+                self.syncthing_version, self.device_name))
+            self.mi_start_syncthing.set_sensitive(False)
+            self.mi_restart_syncthing.set_sensitive(True)
+            self.mi_shutdown_syncthing.set_sensitive(True)
+        else:
+            self.title_menu.set_label('Syncthing: not running?')
+            self.mi_start_syncthing.set_sensitive(True)
+            self.mi_restart_syncthing.set_sensitive(False)
+            self.mi_shutdown_syncthing.set_sensitive(False)
 
 
     def count_connected(self):
         return len([e for e in self.devices if e['state'] == 'connected'])
 
 
+    def syncthing_start(self, *args):
+        cmd = os.path.join(self.wd, 'start-syncthing.sh')
+        log.info('Starting {}'.format(cmd))
+        try:
+            proc = subprocess.Popen([cmd])
+        except Exception as e:
+            log.error("Couldn't run {}: {}".format(cmd, e))
+            return
+        self.state['update_st_running'] = True
+        self.last_seen_id = int(0)
+
+
     def syncthing_restart(self, *args):
         self.rest_post('/rest/system/restart')
+        self.last_seen_id = int(0)
 
 
     def syncthing_shutdown(self, *args):
         self.rest_post('/rest/system/shutdown')
+        self.last_seen_id = int(0)
 
 
     def convert_time(self, time):
