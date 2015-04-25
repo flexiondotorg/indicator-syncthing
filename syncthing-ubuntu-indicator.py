@@ -86,12 +86,12 @@ class Main(object):
         sep.show()
         self.menu.append(sep)
 
-        self.connected_devices_menu = Gtk.MenuItem('Devices')
-        self.connected_devices_menu.show()
-        self.connected_devices_menu.set_sensitive(False)
-        self.menu.append(self.connected_devices_menu)
-        self.connected_devices_submenu = Gtk.Menu()
-        self.connected_devices_menu.set_submenu(self.connected_devices_submenu)
+        self.devices_menu = Gtk.MenuItem('Devices')
+        self.devices_menu.show()
+        self.devices_menu.set_sensitive(False)
+        self.menu.append(self.devices_menu)
+        self.devices_submenu = Gtk.Menu()
+        self.devices_menu.set_submenu(self.devices_submenu)
 
         self.folder_menu = Gtk.MenuItem('Folders')
         self.folder_menu.show()
@@ -524,25 +524,25 @@ class Main(object):
 
 
     def update_devices(self):
-        self.connected_devices_menu.set_label('Devices (%s connected)' % self.count_connected())
+        self.devices_menu.set_label('Devices (%s connected)' % self.count_connected())
         if len(self.devices) == 0:
-            self.connected_devices_menu.set_label('Devices (0 connected)')
-            self.connected_devices_menu.set_sensitive(False)
+            self.devices_menu.set_label('Devices (0 connected)')
+            self.devices_menu.set_sensitive(False)
         else:
-            self.connected_devices_menu.set_sensitive(True)
+            self.devices_menu.set_sensitive(True)
 
-            if len(self.devices) == len(self.connected_devices_submenu) + 1:
-                # this updates the connected devices menu
-                for mi in self.connected_devices_submenu:
+            if len(self.devices) == len(self.devices_submenu) + 1:
+                # this updates the devices menu
+                for mi in self.devices_submenu:
                     for elm in self.devices:
                         if mi.get_label() == elm['name']:
                             mi.set_label(elm['name'])
                             mi.set_sensitive(elm['state'] == 'connected')
 
             else:
-                # this populates the connected devices menu with devices from config
-                for child in self.connected_devices_submenu.get_children():
-                    self.connected_devices_submenu.remove(child)
+                # this populates the devices menu with devices from config
+                for child in self.devices_submenu.get_children():
+                    self.devices_submenu.remove(child)
 
                 for nid in sorted(self.devices, key=lambda nid: nid['name']):
                     if nid['id'] == self.system_data.get('myID', None):
@@ -552,7 +552,7 @@ class Main(object):
 
                     mi = Gtk.MenuItem(nid['name'])
                     mi.set_sensitive(nid['state'] == 'connected')
-                    self.connected_devices_submenu.append(mi)
+                    self.devices_submenu.append(mi)
                     mi.show()
         self.state['update_devices'] = False
 
