@@ -231,8 +231,8 @@ class Main(object):
             for elem in folders:
                 if elem.hasAttribute('id') and elem.hasAttribute('path'):
                     self.folders.append({
-                        'folder': elem.getAttribute('id'),
-                        'directory': elem.getAttribute('path'),
+                        'id': elem.getAttribute('id'),
+                        'path': elem.getAttribute('path'),
                         'state': 'unknown',
                         })
         except:
@@ -357,7 +357,7 @@ class Main(object):
 
     def event_statechanged(self, event):
         for elem in self.folders:
-            if elem['folder'] == event['data']['folder']:
+            if elem['id'] == event['data']['folder']:
                 elem['state'] = event['data']['to']
                 self.state['update_folders'] = True
         self.set_state()
@@ -419,7 +419,7 @@ class Main(object):
                         'direction': 'down'}
         self.downloading_files.append(file_details)
         for elm in self.folders:
-            if elm['folder'] == event['data']['folder']:
+            if elm['id'] == event['data']['folder']:
                 elm['state'] = 'syncing'
         self.set_state()
         self.state['update_files'] = True
@@ -613,16 +613,16 @@ class Main(object):
             if len(self.folders) == len(self.folder_menu_submenu):
                 for mi in self.folder_menu_submenu:
                     for elm in self.folders:
-                        if str(mi.get_label()).split(' ', 1)[0] == elm['folder']:
+                        if str(mi.get_label()).split(' ', 1)[0] == elm['id']:
                             if elm['state'] in ['scanning', 'syncing']:
-                                mi.set_label('{0}   ({1})'.format(elm['folder'], elm['state']))
+                                mi.set_label('{0}   ({1})'.format(elm['id'], elm['state']))
                             else:
-                                mi.set_label(elm['folder'])
+                                mi.set_label(elm['id'])
             else:
                 for child in self.folder_menu_submenu.get_children():
                     self.folder_menu_submenu.remove(child)
                 for elm in self.folders:
-                    mi = Gtk.MenuItem(elm['folder'])
+                    mi = Gtk.MenuItem(elm['id'])
                     self.folder_menu_submenu.append(mi)
                     mi.show()
         self.state['update_folders'] = False
