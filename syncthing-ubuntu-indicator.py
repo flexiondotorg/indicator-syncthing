@@ -78,6 +78,10 @@ class Main(object):
         self.syncthing_upgrade_menu.connect('activate', self.open_releases_page)
         self.menu.append(self.syncthing_upgrade_menu)
 
+        self.mi_errors = Gtk.MenuItem('Errors: open web interface')
+        self.mi_errors.connect('activate', self.open_web_ui)
+        self.menu.append(self.mi_errors)
+
         sep = Gtk.SeparatorMenuItem()
         sep.show()
         self.menu.append(sep)
@@ -241,6 +245,7 @@ class Main(object):
         GLib.idle_add(self.rest_get, '/rest/system/connections')
         GLib.idle_add(self.rest_get, '/rest/system/status')
         GLib.idle_add(self.rest_get, '/rest/system/upgrade')
+        GLib.idle_add(self.rest_get, '/rest/system/error')
         GLib.idle_add(self.rest_get, '/rest/events')
         GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
         GLib.timeout_add_seconds(TIMEOUT_REST, self.timeout_rest)
@@ -421,6 +426,7 @@ class Main(object):
 
 
     def event_itemfinished(self, event):
+        # TODO: test whether 'error' is null
         log.debug('item finished: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
@@ -483,6 +489,15 @@ class Main(object):
             log.error('Detected running Syncthing version < v0.11')
             log.error('Syncthing v0.11.0-beta (or higher) required. Exiting.')
             self.leave()
+
+
+    def process_rest_system_error(self, data):
+        if data['errors'] != []:
+            log.info('{}'.format(data['errors']))
+            self.mi_errors.show()
+            self.set_state('error')
+        else:
+            self.mi_errors.hide()
 
     # end of the REST processing functions
 
@@ -705,6 +720,7 @@ class Main(object):
         if self.rest_connected:
             GLib.idle_add(self.rest_get, '/rest/system/connections')
             GLib.idle_add(self.rest_get, '/rest/system/status')
+            GLib.idle_add(self.rest_get, '/rest/system/error')
             if self.timeout_counter == 0:
                 GLib.idle_add(self.rest_get, '/rest/system/upgrade')
                 GLib.idle_add(self.rest_get, '/rest/system/version')
