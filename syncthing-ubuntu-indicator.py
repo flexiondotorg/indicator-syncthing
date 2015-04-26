@@ -338,8 +338,9 @@ class Main(object):
             try:
                 for qitem in json_data:
                     self.process_event(qitem)
-            except ValueError:
-                log.warning('rest_receive_data: error parsing json in /rest/events')
+            except ValueError as e:
+                log.warning('rest_receive_data: error processing event ({})'.format(e))
+                log.debug(qitem)
                 self.set_state('error')
         else:
             fn = getattr(
@@ -423,7 +424,7 @@ class Main(object):
 
 
     def event_itemstarted(self, event):
-        log.debug('item started: {}'.format(event['data']['item']))
+        log.debug(u'item started: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
                         'direction': 'down'}
@@ -437,7 +438,7 @@ class Main(object):
 
     def event_itemfinished(self, event):
         # TODO: test whether 'error' is null
-        log.debug('item finished: {}'.format(event['data']['item']))
+        log.debug(u'item finished: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
                         'direction': 'down'}
