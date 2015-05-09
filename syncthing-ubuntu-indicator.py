@@ -692,9 +692,9 @@ class Main(object):
 
 
     def license(self):
-        with open('LICENSE', 'r') as f:
-            license = f.read()
-        return license
+        with open(os.path.join(self.wd, 'LICENSE'), 'r') as f:
+            lic = f.read()
+        return lic
 
 
     def show_about(self, widget):
