@@ -712,9 +712,11 @@ class Main(object):
 
 
     def folder_check_state(self):
-        state = {'syncing': 0, 'idle': 0, 'cleaning': 0, 'scanning': 0, 'unknown': 0}
+        state = {'syncing': 0, 'idle': 0, 'cleaning': 0, 'scanning': 0,
+                 'unknown': 0}
         for elem in self.folders:
-            state[elem['state']] += 1
+            if elem['state'] in state:
+                state[elem['state']] += 1
 
         if state['syncing'] > 0:
             return 'syncing'
