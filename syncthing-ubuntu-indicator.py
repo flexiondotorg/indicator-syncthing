@@ -177,7 +177,6 @@ class Main(object):
         f.load_contents_async(None, self.load_config_finish)
         return False
 
-
     def load_config_finish(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
@@ -284,7 +283,6 @@ class Main(object):
             f = self.session.post(self.syncthing_url(rest_path), headers=headers)
         return False
 
-
     def rest_get(self, rest_path):
         log.debug('rest_get {}'.format(rest_path))
         # url for the included testserver: http://localhost:5115
@@ -298,7 +296,6 @@ class Main(object):
                              timeout=8)
         f.add_done_callback(self.rest_receive_data)
         return False
-
 
     def rest_receive_data(self, future):
         try:
@@ -364,10 +361,8 @@ class Main(object):
         fn = getattr(self, 'event_{}'.format(t), self.event_unknown_event)(event)
         self.update_last_seen_id(event.get('id', 0))
 
-
     def event_unknown_event(self, event):
         pass
-
 
     def event_statechanged(self, event):
         for elem in self.folders:
@@ -386,17 +381,14 @@ class Main(object):
         self.set_state('paused')
         log.info('Received that Syncthing was starting at %s' % event['time'])
 
-
     def event_startupcomplete(self, event):
         self.set_state('idle')
         time = self.convert_time(event['time'])
         log.debug('Startup done at %s' % time)
 
-
     def event_ping(self, event):
         self.last_ping = dateutil.parser.parse(event['time'])
         log.debug('A ping was sent at %s' % self.last_ping.strftime('%H:%M'))
-
 
     def event_devicediscovered(self, event):
         found = False
@@ -414,7 +406,6 @@ class Main(object):
                 })
         self.state['update_devices'] = True
 
-
     def event_deviceconnected(self, event):
         for elem in self.devices:
             if event['data']['id'] == elem['id']:
@@ -422,14 +413,12 @@ class Main(object):
                 log.debug('device %s connected' % elem['name'])
         self.state['update_devices'] = True
 
-
     def event_devicedisconnected(self, event):
         for elem in self.devices:
             if event['data']['id'] == elem['id']:
                 elem['state'] = 'disconnected'
                 log.debug('device %s disconnected' % elem['name'])
         self.state['update_devices'] = True
-
 
     def event_itemstarted(self, event):
         log.debug(u'item started: {}'.format(event['data']['item']))
@@ -442,7 +431,6 @@ class Main(object):
                 elm['state'] = 'syncing'
         self.set_state()
         self.state['update_files'] = True
-
 
     def event_itemfinished(self, event):
         # TODO: test whether 'error' is null
@@ -464,7 +452,6 @@ class Main(object):
 
     # end of the event processing dings
 
-
     # begin REST processing functions
 
     def process_rest_system_connections(self, data):
@@ -474,11 +461,9 @@ class Main(object):
                     nid['state'] = 'connected'
                     self.state['update_devices'] = True
 
-
     def process_rest_system_status(self, data):
         self.system_data = data
         self.state['update_st_running'] = True
-
 
     def process_rest_system_upgrade(self, data):
         if data['newer']:
@@ -488,11 +473,9 @@ class Main(object):
         else:
             self.syncthing_upgrade_menu.hide()
 
-
     def process_rest_system_version(self, data):
         self.syncthing_version = data['version']
         self.state['update_st_running'] = True
-
 
     def process_rest_system_ping(self, data):
         if data['ping'] == 'pong':
@@ -501,14 +484,12 @@ class Main(object):
             self.rest_connected = True
             self.ping_counter = 0
 
-
     def process_rest_ping(self, data):
         if data['ping'] == 'pong':
             # Basic version check
             log.error('Detected running Syncthing version < v0.11')
-            log.error('Syncthing v0.11.0-beta (or higher) required. Exiting.')
+            log.error('Syncthing v0.11 (or higher) required. Exiting.')
             self.leave()
-
 
     def process_rest_system_error(self, data):
         self.errors = data['errors']
@@ -529,12 +510,10 @@ class Main(object):
                 start = getattr(self, '%s' % func)()
         return True
 
-
     def update_last_checked(self, isotime):
         #dt = dateutil.parser.parse(isotime)
         #self.last_checked_menu.set_label('Last checked: %s' % (dt.strftime('%H:%M'),))
         pass
-
 
     def update_last_seen_id(self, lsi):
         if lsi > self.last_seen_id:
@@ -542,7 +521,6 @@ class Main(object):
         elif lsi < self.last_seen_id:
             log.warning('received event id {} less than last_seen_id {}'.format(
                 lsi, self.last_seen_id))
-
 
     def update_devices(self):
         self.devices_menu.set_label('Devices (%s connected)' % self.count_connected())
@@ -576,7 +554,6 @@ class Main(object):
                     self.devices_submenu.append(mi)
                     mi.show()
         self.state['update_devices'] = False
-
 
     def update_files(self):
         self.current_files_menu.set_label(u'Syncing \u2191 %s  \u2193 %s' % (
@@ -625,7 +602,6 @@ class Main(object):
             self.recent_files_menu.show()
         self.state['update_files'] = False
 
-
     def update_folders(self):
         if self.folders:
             self.folder_menu.set_sensitive(True)
@@ -660,7 +636,6 @@ class Main(object):
             self.folder_menu.set_sensitive(False)
         self.state['update_folders'] = False
 
-
     def update_st_running(self):
         if self.rest_connected:
             self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
@@ -690,11 +665,9 @@ class Main(object):
         self.state['update_st_running'] = True
         self.last_seen_id = int(0)
 
-
     def syncthing_restart(self, *args):
         self.rest_post('/rest/system/restart')
         self.last_seen_id = int(0)
-
 
     def syncthing_shutdown(self, *args):
         self.rest_post('/rest/system/shutdown')
@@ -704,7 +677,6 @@ class Main(object):
     def convert_time(self, time):
         return dateutil.parser.parse(time).strftime('%x %X')
 
-
     def calc_speed(self, old, new):
         return old / (new * 10)
 
@@ -713,7 +685,6 @@ class Main(object):
         with open(os.path.join(self.wd, 'LICENSE'), 'r') as f:
             lic = f.read()
         return lic
-
 
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
