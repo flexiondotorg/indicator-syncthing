@@ -47,6 +47,8 @@ class Main(object):
         self.recent_files = []
         self.folders = []
         self.devices = []
+        self.errors = []
+
         self.last_ping = None
         self.system_data = {}
         self.syncthing_base = 'http://localhost:8080'
@@ -509,7 +511,8 @@ class Main(object):
 
 
     def process_rest_system_error(self, data):
-        if data['errors'] != []:
+        self.errors = data['errors']
+        if self.errors:
             log.info('{}'.format(data['errors']))
             self.mi_errors.show()
             self.set_state('error')
@@ -720,8 +723,8 @@ class Main(object):
         if not s:
             s = self.state['set_icon']
 
-        if s == 'error':
-            self.state['set_icon'] = s
+        if (s == 'error') or self.errors:
+            self.state['set_icon'] = 'error'
         else:
             self.state['set_icon'] = self.folder_check_state()
 
