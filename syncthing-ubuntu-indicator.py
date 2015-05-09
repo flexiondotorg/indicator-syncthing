@@ -738,7 +738,8 @@ class Main(object):
         }
 
         self.ind.set_attention_icon(icon[self.state['set_icon']]['name'])
-        self.ind.set_icon_full(icon[self.state['set_icon']]['name'], icon[self.state['set_icon']]['descr'])
+        self.ind.set_icon_full(icon[self.state['set_icon']]['name'],
+                               icon[self.state['set_icon']]['descr'])
         #GLib.timeout_add_seconds(1, self.set_icon)
 
 
@@ -788,8 +789,10 @@ if __name__ == '__main__':
     TIMEOUT_GUI = args.timeout_gui
 
     # Setup logging:
-    loglevels = {'debug': log.DEBUG, 'info': log.INFO, 'warning': log.WARNING, 'error': log.ERROR}
-    log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevels[args.loglevel])
+    loglevels = {'debug': log.DEBUG, 'info': log.INFO,
+                 'warning': log.WARNING, 'error': log.ERROR}
+    log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                    level=loglevels[args.loglevel])
     requests_log = log.getLogger('urllib3.connectionpool')
     requests_log.setLevel(log.WARNING)
     requests_log.propagate = True
