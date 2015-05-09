@@ -54,9 +54,8 @@ class Main(object):
         self.syncthing_version = ''
         self.device_name = ''
         self.last_seen_id = 0
-        self.rest_connected = False
         self.timeout_counter = 0
-        self.ping_counter = 0
+        self.count_connection_error = 0
 
         self.session = FuturesSession()
 
@@ -300,7 +299,7 @@ class Main(object):
         f = self.session.get(self.syncthing_url(rest_path),
                              params=params,
                              headers=headers,
-                             timeout=8)
+                             timeout=9)
         f.add_done_callback(self.rest_receive_data)
         return False
 
@@ -308,15 +307,18 @@ class Main(object):
         try:
             r = future.result()
         except requests.exceptions.ConnectionError:
-            log.error("Couldn't connect to Syncthing REST interface at {}".format(
+            log.error(
+                "Couldn't connect to Syncthing REST interface at {}".format(
                 self.syncthing_url('')))
-            self.rest_connected = False
-            self.state['update_st_running'] = True
-            if self.ping_counter > 1:
+            self.count_connection_error += 1
+            log.info('count_connection_error: %s' % self.count_connection_error)
+            if self.count_connection_error > 1:
+                self.state['update_st_running'] = True
                 self.set_state('paused')
             return
         except (requests.exceptions.Timeout, socket.timeout):
-            log.warning('Timeout')
+            log.debug('Timeout')
+            GLib.idle_add(self.rest_get, '/rest/system/status')
             return
         except Exception as e:
             log.error('exception: {}'.format(e))
@@ -339,8 +341,10 @@ class Main(object):
             self.set_state('error')
             return
 
-        self.set_state('idle')
         log.debug('rest_receive_data: {}'.format(rest_path))
+        # Receiving data appears to have succeeded
+        self.count_connection_error = 0
+        self.set_state('idle') # TODO: fix this
         if rest_path == '/rest/events':
             try:
                 for qitem in json_data:
@@ -469,6 +473,9 @@ class Main(object):
                     self.state['update_devices'] = True
 
     def process_rest_system_status(self, data):
+        if data['uptime'] < self.system_data.get('uptime', 0):
+            # Means that Syncthing restarted
+            self.last_seen_id = 0
         self.system_data = data
         self.state['update_st_running'] = True
 
@@ -488,7 +495,6 @@ class Main(object):
         if data['ping'] == 'pong':
             log.info('Connected to Syncthing REST interface at {}'.format(
                 self.syncthing_url('')))
-            self.rest_connected = True
             self.ping_counter = 0
 
     def process_rest_ping(self, data):
@@ -525,9 +531,6 @@ class Main(object):
     def update_last_seen_id(self, lsi):
         if lsi > self.last_seen_id:
             self.last_seen_id = lsi
-        elif lsi < self.last_seen_id:
-            log.warning('received event id {} less than last_seen_id {}'.format(
-                lsi, self.last_seen_id))
 
     def update_devices(self):
         self.devices_menu.set_label('Devices (%s connected)' % self.count_connected())
@@ -639,14 +642,14 @@ class Main(object):
         self.state['update_folders'] = False
 
     def update_st_running(self):
-        if self.rest_connected:
+        if self.count_connection_error <= 1:
             self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
                 self.syncthing_version, self.device_name))
             self.mi_start_syncthing.set_sensitive(False)
             self.mi_restart_syncthing.set_sensitive(True)
             self.mi_shutdown_syncthing.set_sensitive(True)
         else:
-            self.title_menu.set_label('Syncthing: not running?')
+            self.title_menu.set_label('Could not connect to Syncthing')
             self.mi_start_syncthing.set_sensitive(True)
             self.mi_restart_syncthing.set_sensitive(False)
             self.mi_shutdown_syncthing.set_sensitive(False)
@@ -708,7 +711,7 @@ class Main(object):
 
         if (s == 'error') or self.errors:
             self.state['set_icon'] = 'error'
-        elif not self.rest_connected:
+        elif self.count_connection_error > 1:
             self.state['set_icon'] = 'paused'
         else:
             self.state['set_icon'] = self.folder_check_state()
@@ -752,7 +755,7 @@ class Main(object):
 
     def timeout_rest(self):
         self.timeout_counter = (self.timeout_counter + 1) % 10
-        if self.rest_connected:
+        if self.count_connection_error == 0:
             GLib.idle_add(self.rest_get, '/rest/system/connections')
             GLib.idle_add(self.rest_get, '/rest/system/status')
             GLib.idle_add(self.rest_get, '/rest/system/error')
@@ -760,14 +763,12 @@ class Main(object):
                 GLib.idle_add(self.rest_get, '/rest/system/upgrade')
                 GLib.idle_add(self.rest_get, '/rest/system/version')
         else:
-            self.ping_counter += 1
-            log.debug('ping counter {}'.format(self.ping_counter))
-            GLib.idle_add(self.rest_get, '/rest/system/ping')
+            GLib.idle_add(self.rest_get, '/rest/system/status')
         return True
 
 
     def timeout_events(self):
-        if self.rest_connected:
+        if self.count_connection_error == 0:
             GLib.idle_add(self.rest_get, '/rest/events')
         return True
 
@@ -778,8 +779,9 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--loglevel', choices=['debug', 'info', 'warning', 'error'], default='info')
-    parser.add_argument('--timeout-event', type=int, default=5)
+    parser.add_argument('--loglevel',
+        choices=['debug', 'info', 'warning', 'error'], default='info')
+    parser.add_argument('--timeout-event', type=int, default=10)
     parser.add_argument('--timeout-rest', type=int, default=30)
     parser.add_argument('--timeout-gui', type=int, default=5)
 
