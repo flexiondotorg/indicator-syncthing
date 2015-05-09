@@ -805,9 +805,12 @@ if __name__ == '__main__':
     TIMEOUT_REST = args.timeout_rest
     TIMEOUT_GUI = args.timeout_gui
 
-    # setup debugging:
+    # Setup logging:
     loglevels = {'debug': log.DEBUG, 'info': log.INFO, 'warning': log.WARNING, 'error': log.ERROR}
     log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevels[args.loglevel])
+    requests_log = log.getLogger('urllib3.connectionpool')
+    requests_log.setLevel(log.WARNING)
+    requests_log.propagate = True
 
     app = Main()
     Gtk.main()
