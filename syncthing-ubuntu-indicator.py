@@ -13,7 +13,8 @@ import urlparse
 import webbrowser
 
 import pytz
-import requests
+import requests   # used only to catch exceptions
+import socket     # used only to catch exceptions
 from requests_futures.sessions import FuturesSession
 from gi.repository import Gtk, Gio, GLib
 from gi.repository import AppIndicator3 as appindicator
@@ -308,8 +309,8 @@ class Main(object):
             if self.ping_counter > 1:
                 self.set_state('error')
             return
-        except requests.exceptions.Timeout:
-            log.warning('Connection timeout')
+        except (requests.exceptions.Timeout, socket.timeout):
+            log.warning('Timeout')
             return
         except Exception as e:
             log.error('exception: {}'.format(e))
