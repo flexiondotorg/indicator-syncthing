@@ -410,14 +410,14 @@ class Main(object):
         for elem in self.devices:
             if event['data']['id'] == elem['id']:
                 elem['state'] = 'connected'
-                log.debug('device %s connected' % elem['name'])
+                log.info('Device connected: %s' % elem['name'])
         self.state['update_devices'] = True
 
     def event_devicedisconnected(self, event):
         for elem in self.devices:
             if event['data']['id'] == elem['id']:
                 elem['state'] = 'disconnected'
-                log.debug('device %s disconnected' % elem['name'])
+                log.info('Device disconnected: %s' % elem['name'])
         self.state['update_devices'] = True
 
     def event_itemstarted(self, event):
