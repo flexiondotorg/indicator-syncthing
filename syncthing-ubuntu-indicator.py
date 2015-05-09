@@ -373,6 +373,11 @@ class Main(object):
                 self.state['update_folders'] = True
         self.set_state()
 
+    def event_foldersummary(self, event):
+        for elem in self.folders:
+            if elem['id'] == event['data']['folder']:
+                elem.update(event['data']['summary'])
+        self.state['update_folders'] = True
 
     def event_starting(self, event):
         self.set_state('paused')
