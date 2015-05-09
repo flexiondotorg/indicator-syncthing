@@ -627,9 +627,7 @@ class Main(object):
 
 
     def update_folders(self):
-        if len(self.folders) == 0:
-            self.folder_menu.set_sensitive(False)
-        else:
+        if self.folders:
             self.folder_menu.set_sensitive(True)
             folder_maxlength = 0
             if len(self.folders) == len(self.folder_menu_submenu):
@@ -637,8 +635,17 @@ class Main(object):
                     for elm in self.folders:
                         folder_maxlength = max(folder_maxlength, len(elm['id']))
                         if str(mi.get_label()).split(' ', 1)[0] == elm['id']:
-                            if elm['state'] in ['scanning', 'syncing']:
-                                mi.set_label('{0}   ({1})'.format(elm['id'], elm['state']))
+                            if elm['state'] == 'scanning':
+                                mi.set_label('{} (scanning)'.format(elm['id']))
+                            elif elm['state'] == 'syncing':
+                                if elm.get('needFiles') > 1:
+                                    lbltext = '{fid} (syncing {num} files)'
+                                elif elm.get('needFiles') == 1:
+                                    lbltext = '{fid} (syncing {num} file)'
+                                else:
+                                    lbltext = '{fid} (syncing)'
+                                mi.set_label(lbltext.format(
+                                    fid=elm['id'], num=elm.get('needFiles')))
                             else:
                                 mi.set_label(elm['id'].ljust(folder_maxlength + 20))
             else:
@@ -649,6 +656,8 @@ class Main(object):
                     mi = Gtk.MenuItem(elm['id'].ljust(folder_maxlength + 20))
                     self.folder_menu_submenu.append(mi)
                     mi.show()
+        else:
+            self.folder_menu.set_sensitive(False)
         self.state['update_folders'] = False
 
 
