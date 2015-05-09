@@ -54,7 +54,7 @@ class Main(object):
         self.syncthing_base = 'http://localhost:8080'
         self.syncthing_version = ''
         self.device_name = ''
-        self.last_seen_id = int(0)
+        self.last_seen_id = 0
         self.rest_connected = False
         self.timeout_counter = 0
         self.ping_counter = 0
@@ -663,15 +663,15 @@ class Main(object):
             log.error("Couldn't run {}: {}".format(cmd, e))
             return
         self.state['update_st_running'] = True
-        self.last_seen_id = int(0)
+        self.last_seen_id = 0
 
     def syncthing_restart(self, *args):
         self.rest_post('/rest/system/restart')
-        self.last_seen_id = int(0)
+        self.last_seen_id = 0
 
     def syncthing_shutdown(self, *args):
         self.rest_post('/rest/system/shutdown')
-        self.last_seen_id = int(0)
+        self.last_seen_id = 0
 
 
     def convert_time(self, time):
