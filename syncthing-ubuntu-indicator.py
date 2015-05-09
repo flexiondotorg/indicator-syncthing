@@ -43,7 +43,6 @@ class Main(object):
         self.create_menu()
 
         self.downloading_files = []
-        self.uploading_files = []
         self.recent_files = []
         self.folders = []
         self.devices = []
@@ -104,12 +103,20 @@ class Main(object):
         self.folder_menu_submenu = Gtk.Menu()
         self.folder_menu.set_submenu(self.folder_menu_submenu)
 
-        self.current_files_menu = Gtk.MenuItem('Current files')
+        sep = Gtk.SeparatorMenuItem()
+        sep.show()
+        self.menu.append(sep)
+
+        self.current_files_menu = Gtk.MenuItem('Syncing')
+        self.current_files_menu.show()
+        self.current_files_menu.set_sensitive(False)
         self.menu.append(self.current_files_menu)
         self.current_files_submenu = Gtk.Menu()
         self.current_files_menu.set_submenu(self.current_files_submenu)
 
         self.recent_files_menu = Gtk.MenuItem('Recently synced')
+        self.recent_files_menu.show()
+        self.recent_files_menu.set_sensitive(False)
         self.menu.append(self.recent_files_menu)
         self.recent_files_submenu = Gtk.Menu()
         self.recent_files_menu.set_submenu(self.recent_files_submenu)
@@ -556,44 +563,39 @@ class Main(object):
         self.state['update_devices'] = False
 
     def update_files(self):
-        self.current_files_menu.set_label(u'Syncing \u2191 %s  \u2193 %s' % (
-            len(self.uploading_files), len(self.downloading_files)))
+        self.current_files_menu.set_label(u'Syncing %s files' % (
+            len(self.downloading_files)))
 
-        if (len(self.uploading_files), len(self.downloading_files)) == (0,0):
-            self.current_files_menu.hide()
+        if not self.downloading_files:
+            self.current_files_menu.set_sensitive(False)
             #self.set_state('idle')
         else:
-            # repopulate the current files menu
+            # Repopulate the current files menu
+            self.current_files_menu.set_sensitive(True)
             self.set_state('syncing')
             for child in self.current_files_submenu.get_children():
                 self.current_files_submenu.remove(child)
-            for f in self.uploading_files:
-                mi = Gtk.MenuItem(u'\u2191 [{}] {}'.format(f['folder'], f['file']))
-                self.current_files_submenu.append(mi)
-                mi.show()
             for f in self.downloading_files:
                 mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(f['folder'], f['file']))
                 self.current_files_submenu.append(mi)
                 mi.show()
             self.current_files_menu.show()
 
-        # repopulate the recent files menu
+        # Repopulate the recent files menu
         if not self.recent_files:
-            self.recent_files_menu.hide()
+            self.recent_files_menu.set_sensitive(False)
         else:
+            self.recent_files_menu.set_sensitive(True)
             for child in self.recent_files_submenu.get_children():
                 self.recent_files_submenu.remove(child)
             for f in self.recent_files:
-                updown = u'\u2193' u'\u2191'
                 if f['action'] == 'delete':
-                    action = '(Del)'
+                    icon = u'\u2612'  # [x]
                 else:
-                    action = updown
+                    icon = u'\u2193'  # down arrow
                 mi = Gtk.MenuItem(
-                    u'{time} [{folder}] {action} {item}'.format(
-                        action=action,
-                        folder=f['folder'],
-                        item=f['file'],
+                    u'{icon} {time} [{folder}] {item}'.format(
+                        icon=icon, folder=f['folder'], item=f['file'],
                         time=self.convert_time(f['time'])
                         )
                     )
