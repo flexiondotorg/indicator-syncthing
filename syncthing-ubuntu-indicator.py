@@ -38,7 +38,7 @@ class Main(object):
                       'update_devices': True,
                       'update_files': True,
                       'update_st_running': False,
-                      'set_icon': 'idle'}
+                      'set_icon': 'paused'}
         self.set_icon()
         self.create_menu()
 
@@ -309,7 +309,7 @@ class Main(object):
             self.rest_connected = False
             self.state['update_st_running'] = True
             if self.ping_counter > 1:
-                self.set_state('error')
+                self.set_state('paused')
             return
         except (requests.exceptions.Timeout, socket.timeout):
             log.warning('Timeout')
@@ -725,6 +725,8 @@ class Main(object):
 
         if (s == 'error') or self.errors:
             self.state['set_icon'] = 'error'
+        elif not self.rest_connected:
+            self.state['set_icon'] = 'paused'
         else:
             self.state['set_icon'] = self.folder_check_state()
 
