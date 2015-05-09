@@ -338,7 +338,7 @@ class Main(object):
             try:
                 for qitem in json_data:
                     self.process_event(qitem)
-            except ValueError as e:
+            except Exception as e:
                 log.warning('rest_receive_data: error processing event ({})'.format(e))
                 log.debug(qitem)
                 self.set_state('error')
