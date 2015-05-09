@@ -447,7 +447,7 @@ class Main(object):
         file_details['time'] = event['time']
         file_details['action'] = event['data']['action']
         self.recent_files.append(file_details)
-        self.recent_files = self.recent_files[-5:]
+        self.recent_files = self.recent_files[-20:]
         self.state['update_files'] = True
 
     # end of the event processing dings
