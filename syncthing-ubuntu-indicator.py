@@ -409,6 +409,8 @@ class Main(object):
         self.set_state('idle')
         time = self.convert_time(event['time'])
         log.debug('Startup done at %s' % time)
+        # Check config for added/removed devices or folders.
+        GLib.idle_add(self.rest_get, '/rest/system/config')
 
     def event_ping(self, event):
         self.last_ping = dateutil.parser.parse(event['time'])
@@ -486,6 +488,29 @@ class Main(object):
                 if nid['id'] == elem:
                     nid['state'] = 'connected'
                     self.state['update_devices'] = True
+
+    def process_rest_system_config(self, data):
+        log.info('Processing /rest/system/config')
+        self.api_key = data['gui']['apiKey']
+
+        newfolders = []
+        for elem in data['folders']:
+            newfolders.append({
+                'id': elem['id'],
+                'path': elem['path'],
+                'state': 'unknown'
+                })
+
+        newdevices = []
+        for elem in data['devices']:
+            newdevices.append({
+                'id': elem['deviceID'],
+                'name': elem['name'],
+                'state': 'disconnected'
+                })
+
+        self.folders = newfolders
+        self.devices = newdevices
 
     def process_rest_system_status(self, data):
         if data['uptime'] < self.system_data.get('uptime', 0):
