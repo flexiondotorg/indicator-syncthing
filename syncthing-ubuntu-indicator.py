@@ -448,6 +448,7 @@ class Main(object):
         log.debug(u'item started: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
+                        'type': event['data']['type'],
                         'direction': 'down'}
         self.downloading_files.append(file_details)
         for elm in self.folders:
@@ -461,6 +462,7 @@ class Main(object):
         log.debug(u'item finished: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
+                        'type': event['data']['type'],
                         'direction': 'down'}
         try:
             self.downloading_files.remove(file_details)
@@ -470,8 +472,8 @@ class Main(object):
                 event['data']['item']))
         file_details['time'] = event['time']
         file_details['action'] = event['data']['action']
-        self.recent_files.append(file_details)
-        self.recent_files = self.recent_files[-20:]
+        self.recent_files.insert(0, file_details)
+        self.recent_files = self.recent_files[:20]
         self.state['update_files'] = True
 
     # end of the event processing dings
