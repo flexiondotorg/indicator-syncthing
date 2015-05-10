@@ -22,6 +22,19 @@ from xml.dom import minidom
 
 VERSION = 'v0.3.0'
 
+def shorten_path(text, maxlength=80):
+    if len(text) <= maxlength:
+        return text
+    head, tail = os.path.split(text)
+    if len(tail) > maxlength:
+        return tail[:maxlength]  # TODO: separate file extension
+    while len(head) + len(tail) > maxlength:
+        head = '/'.join(head.split('/')[:-1])
+        if head == '':
+            return '.../' + tail
+    return head + '/.../' + tail
+
+
 class Main(object):
     def __init__(self):
         log.info('Started main procedure')
@@ -579,7 +592,9 @@ class Main(object):
             for child in self.current_files_submenu.get_children():
                 self.current_files_submenu.remove(child)
             for f in self.downloading_files:
-                mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(f['folder'], f['file']))
+                mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(
+                    f['folder'],
+                    shorten_path(f['file'])))
                 self.current_files_submenu.append(mi)
                 mi.show()
             self.current_files_menu.show()
@@ -598,7 +613,9 @@ class Main(object):
                     icon = u'\u2193'  # down arrow
                 mi = Gtk.MenuItem(
                     u'{icon} {time} [{folder}] {item}'.format(
-                        icon=icon, folder=f['folder'], item=f['file'],
+                        icon=icon,
+                        folder=f['folder'],
+                        item=shorten_path(f['file']),
                         time=self.convert_time(f['time'])
                         )
                     )
