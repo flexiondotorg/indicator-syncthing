@@ -548,23 +548,23 @@ class Main(object):
             self.last_seen_id = lsi
 
     def update_devices(self):
-        self.devices_menu.set_label('Devices (%s connected)' % self.count_connected())
-        if len(self.devices) == 0:
-            self.devices_menu.set_label('Devices (0 connected)')
+        if not self.devices:
+            self.devices_menu.set_label('No devices)')
             self.devices_menu.set_sensitive(False)
         else:
+            self.devices_menu.set_label('Devices ({}/{})'.format(
+                self.count_connected(), len(self.devices) - 1))
             self.devices_menu.set_sensitive(True)
 
             if len(self.devices) == len(self.devices_submenu) + 1:
-                # this updates the devices menu
+                # Update the devices menu
                 for mi in self.devices_submenu:
                     for elm in self.devices:
                         if mi.get_label() == elm['name']:
                             mi.set_label(elm['name'])
                             mi.set_sensitive(elm['state'] == 'connected')
-
             else:
-                # this populates the devices menu with devices from config
+                # Populate the devices menu with devices from config
                 for child in self.devices_submenu.get_children():
                     self.devices_submenu.remove(child)
 
