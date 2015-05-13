@@ -252,7 +252,8 @@ class Main(object):
                         'id': elem.getAttribute('id'),
                         'name': elem.getAttribute('name'),
                         'compression': elem.getAttribute('compression'),
-                        'state': 'disconnected',
+                        'state': '',
+                        'connected': False
                         })
         except:
             log.error('config has no devices configured')
@@ -406,6 +407,15 @@ class Main(object):
                 elem.update(event['data']['summary'])
         self.state['update_folders'] = True
 
+    def event_foldercompletion(self, event):
+        for dev in self.devices:
+            if dev['id'] == event['data']['device']:
+                if event['data']['completion'] < 100:
+                    dev['state'] = 'syncing'
+                else:
+                    dev['state'] = ''
+        self.state['update_devices'] = True
+
     def event_starting(self, event):
         self.set_state('paused')
         log.info('Received that Syncthing was starting at %s' % event['time'])
@@ -438,17 +448,17 @@ class Main(object):
         self.state['update_devices'] = True
 
     def event_deviceconnected(self, event):
-        for elem in self.devices:
-            if event['data']['id'] == elem['id']:
-                elem['state'] = 'connected'
-                log.info('Device connected: %s' % elem['name'])
+        for dev in self.devices:
+            if event['data']['id'] == dev['id']:
+                dev['connected'] = True
+                log.info('Device connected: %s' % dev['name'])
         self.state['update_devices'] = True
 
     def event_devicedisconnected(self, event):
-        for elem in self.devices:
-            if event['data']['id'] == elem['id']:
-                elem['state'] = 'disconnected'
-                log.info('Device disconnected: %s' % elem['name'])
+        for dev in self.devices:
+            if event['data']['id'] == dev['id']:
+                dev['connected'] = False
+                log.info('Device disconnected: %s' % dev['name'])
         self.state['update_devices'] = True
 
     def event_itemstarted(self, event):
@@ -488,11 +498,11 @@ class Main(object):
     # begin REST processing functions
 
     def process_rest_system_connections(self, data):
-        for elem in data['connections'].iterkeys():
-            for nid in self.devices:
-                if nid['id'] == elem:
-                    nid['state'] = 'connected'
-                    self.state['update_devices'] = True
+        for elem in data['connections']:
+            for dev in self.devices:
+                if dev['id'] == elem:
+                    dev['connected'] = True
+        self.state['update_devices'] = True
 
     def process_rest_system_config(self, data):
         log.info('Processing /rest/system/config')
@@ -511,7 +521,8 @@ class Main(object):
             newdevices.append({
                 'id': elem['deviceID'],
                 'name': elem['name'],
-                'state': 'disconnected'
+                'state': '',
+                'connected': False,
                 })
 
         self.folders = newfolders
@@ -577,36 +588,36 @@ class Main(object):
             self.last_seen_id = lsi
 
     def update_devices(self):
-        if not self.devices:
-            self.devices_menu.set_label('No devices)')
-            self.devices_menu.set_sensitive(False)
-        else:
+        if self.devices:
+            # TODO: set icon if zero devices are connected
             self.devices_menu.set_label('Devices ({}/{})'.format(
                 self.count_connected(), len(self.devices) - 1))
             self.devices_menu.set_sensitive(True)
 
-            if len(self.devices) == len(self.devices_submenu) + 1:
+            if len(self.devices_submenu) == len(self.devices) - 1:
                 # Update the devices menu
                 for mi in self.devices_submenu:
                     for elm in self.devices:
-                        if mi.get_label() == elm['name']:
+                        if mi.get_label().split(' ')[0] == elm['name']:
                             mi.set_label(elm['name'])
-                            mi.set_sensitive(elm['state'] == 'connected')
+                            mi.set_sensitive(elm['connected'])
             else:
-                # Populate the devices menu with devices from config
+                # Repopulate the devices menu
                 for child in self.devices_submenu.get_children():
                     self.devices_submenu.remove(child)
 
-                for nid in sorted(self.devices, key=lambda nid: nid['name']):
-                    if nid['id'] == self.system_data.get('myID', None):
-                        self.device_name = nid['name']
+                for elm in sorted(self.devices, key=lambda elm: elm['name']):
+                    if elm['id'] == self.system_data.get('myID', None):
+                        self.device_name = elm['name']
                         self.state['update_st_running'] = True
-                        continue
-
-                    mi = Gtk.MenuItem(nid['name'])
-                    mi.set_sensitive(nid['state'] == 'connected')
-                    self.devices_submenu.append(mi)
-                    mi.show()
+                    else:
+                        mi = Gtk.MenuItem(elm['name'])
+                        mi.set_sensitive(elm['connected'])
+                        self.devices_submenu.append(mi)
+                        mi.show()
+        else:
+            self.devices_menu.set_label('No devices)')
+            self.devices_menu.set_sensitive(False)
         self.state['update_devices'] = False
 
     def update_files(self):
@@ -698,13 +709,15 @@ class Main(object):
             self.mi_shutdown_syncthing.set_sensitive(True)
         else:
             self.title_menu.set_label('Could not connect to Syncthing')
+            for dev in self.devices:
+                dev['connected'] = False
             self.mi_start_syncthing.set_sensitive(True)
             self.mi_restart_syncthing.set_sensitive(False)
             self.mi_shutdown_syncthing.set_sensitive(False)
 
 
     def count_connected(self):
-        return len([e for e in self.devices if e['state'] == 'connected'])
+        return len([e for e in self.devices if e['connected']])
 
 
     def syncthing_start(self, *args):
