@@ -467,7 +467,8 @@ class Main(object):
                         'file': event['data']['item'],
                         'type': event['data']['type'],
                         'direction': 'down'}
-        self.downloading_files.append(file_details)
+        if file_details not in self.downloading_files:
+            self.downloading_files.append(file_details)
         for elm in self.folders:
             if elm['id'] == event['data']['folder']:
                 elm['state'] = 'syncing'
