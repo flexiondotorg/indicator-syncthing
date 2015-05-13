@@ -90,7 +90,7 @@ class Main(object):
         self.title_menu.set_sensitive(False)
         self.menu.append(self.title_menu)
 
-        self.syncthing_upgrade_menu = Gtk.MenuItem('Update check')
+        self.syncthing_upgrade_menu = Gtk.MenuItem('Upgrade check')
         self.syncthing_upgrade_menu.connect('activate', self.open_releases_page)
         self.menu.append(self.syncthing_upgrade_menu)
 
@@ -120,14 +120,14 @@ class Main(object):
         sep.show()
         self.menu.append(sep)
 
-        self.current_files_menu = Gtk.MenuItem('Syncing')
+        self.current_files_menu = Gtk.MenuItem('Downloading files')
         self.current_files_menu.show()
         self.current_files_menu.set_sensitive(False)
         self.menu.append(self.current_files_menu)
         self.current_files_submenu = Gtk.Menu()
         self.current_files_menu.set_submenu(self.current_files_submenu)
 
-        self.recent_files_menu = Gtk.MenuItem('Recently synced')
+        self.recent_files_menu = Gtk.MenuItem('Recently downloaded')
         self.recent_files_menu.show()
         self.recent_files_menu.set_sensitive(False)
         self.menu.append(self.recent_files_menu)
@@ -188,7 +188,7 @@ class Main(object):
 
 
     def load_config_begin(self):
-        ''' read needed values from config file '''
+        ''' Read needed values from config file '''
         confdir = GLib.get_user_config_dir()
         if not confdir:
             confdir = os.path.expanduser('~/.config')
@@ -273,7 +273,6 @@ class Main(object):
             self.leave()
 
         # Start processes
-        GLib.idle_add(self.rest_get, '/rest/system/ping')
         GLib.idle_add(self.rest_get, '/rest/system/version')
         GLib.idle_add(self.rest_get, '/rest/system/connections')
         GLib.idle_add(self.rest_get, '/rest/system/status')
@@ -286,13 +285,11 @@ class Main(object):
 
 
     def syncthing_url(self, url):
-        ''' creates a url from given values and the address read from file '''
+        ''' Creates a url from given values and the address read from file '''
         return urlparse.urljoin(self.syncthing_base, url)
-
 
     def open_web_ui(self, *args):
         webbrowser.open(self.syncthing_url(''))
-
 
     def open_releases_page(self, *args):
         webbrowser.open('https://github.com/syncthing/syncthing/releases')
@@ -306,12 +303,13 @@ class Main(object):
         return False
 
     def rest_get(self, rest_path):
-        log.debug('rest_get {}'.format(rest_path))
-        # url for the included testserver: http://localhost:5115
-        headers = {'X-API-Key': self.api_key}
-        params = {}
+        params = ''
         if rest_path == '/rest/events':
             params = {'since': self.last_seen_id}
+
+        log.info('rest_get {} {}'.format(rest_path, params))
+        # url for the included testserver: http://localhost:5115
+        headers = {'X-API-Key': self.api_key}
         f = self.session.get(self.syncthing_url(rest_path),
                              params=params,
                              headers=headers,
@@ -341,6 +339,7 @@ class Main(object):
             return
 
         rest_path = urlparse.urlparse(r.url).path
+        rest_query = urlparse.urlparse(r.url).query
         if r.status_code != 200:
             log.warning('rest_receive_data: {0} failed ({1})'.format(
                 rest_path, r.status_code))
@@ -357,10 +356,10 @@ class Main(object):
             self.set_state('error')
             return
 
-        log.debug('rest_receive_data: {}'.format(rest_path))
         # Receiving data appears to have succeeded
         self.count_connection_error = 0
         self.set_state('idle') # TODO: fix this
+        log.debug('rest_receive_data: {} {}'.format(rest_path, rest_query))
         if rest_path == '/rest/events':
             try:
                 for qitem in json_data:
@@ -380,9 +379,12 @@ class Main(object):
     def process_event(self, event):
         t = event.get('type').lower()
         if hasattr(self, 'event_{}'.format(t)):
-            log.debug('received event: {}'.format(event.get('type')))
+            log.debug('received event: {} {}'.format(
+                event.get('id'), event.get('type')))
+            pass
         else:
-            log.debug('ignoring unknown event: {}'.format(event.get('type')))
+            log.debug('ignoring event: {} {}'.format(
+                event.get('id'), event.get('type')))
 
         #log.debug(json.dumps(event, indent=4))
         fn = getattr(self, 'event_{}'.format(t), self.event_unknown_event)(event)
@@ -395,7 +397,7 @@ class Main(object):
         for elem in self.folders:
             if elem['id'] == event['data']['folder']:
                 elem['state'] = event['data']['to']
-                self.state['update_folders'] = True
+        self.state['update_folders'] = True
         self.set_state()
 
     def event_foldersummary(self, event):
@@ -501,7 +503,7 @@ class Main(object):
             newfolders.append({
                 'id': elem['id'],
                 'path': elem['path'],
-                'state': 'unknown'
+                'state': 'unknown',
                 })
 
         newdevices = []
@@ -538,7 +540,6 @@ class Main(object):
         if data['ping'] == 'pong':
             log.info('Connected to Syncthing REST interface at {}'.format(
                 self.syncthing_url('')))
-            self.ping_counter = 0
 
     def process_rest_ping(self, data):
         if data['ping'] == 'pong':
@@ -813,12 +814,10 @@ class Main(object):
             GLib.idle_add(self.rest_get, '/rest/system/status')
         return True
 
-
     def timeout_events(self):
         if self.count_connection_error == 0:
             GLib.idle_add(self.rest_get, '/rest/events')
         return True
-
 
 
 if __name__ == '__main__':
@@ -845,7 +844,6 @@ if __name__ == '__main__':
     TIMEOUT_REST = args.timeout_rest
     TIMEOUT_GUI = args.timeout_gui
 
-    # Setup logging:
     loglevels = {'debug': log.DEBUG, 'info': log.INFO,
                  'warning': log.WARNING, 'error': log.ERROR}
     log.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
