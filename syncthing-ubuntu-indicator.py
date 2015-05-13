@@ -620,7 +620,7 @@ class Main(object):
         self.state['update_devices'] = False
 
     def update_files(self):
-        self.current_files_menu.set_label(u'Syncing %s files' % (
+        self.current_files_menu.set_label(u'Downloading %s files' % (
             len(self.downloading_files)))
 
         if not self.downloading_files:
@@ -647,14 +647,15 @@ class Main(object):
             self.recent_files_menu.set_sensitive(True)
             for child in self.recent_files_submenu.get_children():
                 self.recent_files_submenu.remove(child)
+            icons = {'delete': u'\u2612', # [x]
+                     'update': u'\u2193', # down arrow
+                     'dir': u'\U0001f4c1', # folder
+                     'file': u'\U0001f4c4', # file
+                     }
             for f in self.recent_files:
-                if f['action'] == 'delete':
-                    icon = u'\u2612'  # [x]
-                else:
-                    icon = u'\u2193'  # down arrow
                 mi = Gtk.MenuItem(
                     u'{icon} {time} [{folder}] {item}'.format(
-                        icon=icon,
+                        icon=icons.get(f['action'], 'unknown'),
                         folder=f['folder'],
                         item=shorten_path(f['file']),
                         time=self.convert_time(f['time'])
