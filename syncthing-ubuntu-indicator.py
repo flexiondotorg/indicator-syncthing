@@ -36,8 +36,9 @@ def shorten_path(text, maxlength=80):
 
 
 class Main(object):
-    def __init__(self):
+    def __init__(self, args):
         log.info('Started main procedure')
+        self.args=args
         self.wd = os.path.normpath(os.path.abspath(os.path.split(__file__)[0]))
         self.icon_path = os.path.join(self.wd, 'icons')
         self.ind = appindicator.Indicator.new_with_path(
@@ -152,24 +153,26 @@ class Main(object):
         self.mi_start_syncthing = Gtk.MenuItem('Start Syncthing')
         self.mi_start_syncthing.connect('activate', self.syncthing_start)
         self.mi_start_syncthing.set_sensitive(False)
-        self.mi_start_syncthing.show()
         self.more_submenu.append(self.mi_start_syncthing)
 
         self.mi_restart_syncthing = Gtk.MenuItem('Restart Syncthing')
         self.mi_restart_syncthing.connect('activate', self.syncthing_restart)
         self.mi_restart_syncthing.set_sensitive(False)
-        self.mi_restart_syncthing.show()
         self.more_submenu.append(self.mi_restart_syncthing)
 
         self.mi_shutdown_syncthing = Gtk.MenuItem('Shutdown Syncthing')
         self.mi_shutdown_syncthing.connect('activate', self.syncthing_shutdown)
         self.mi_shutdown_syncthing.set_sensitive(False)
-        self.mi_shutdown_syncthing.show()
         self.more_submenu.append(self.mi_shutdown_syncthing)
 
         sep = Gtk.SeparatorMenuItem()
-        sep.show()
         self.more_submenu.append(sep)
+
+        if not self.args.no_shutdown:
+            self.mi_start_syncthing.show()
+            self.mi_restart_syncthing.show()
+            self.mi_shutdown_syncthing.show()
+            sep.show()
 
         self.about_menu = Gtk.MenuItem('About Indicator')
         self.about_menu.connect('activate', self.show_about)
@@ -825,9 +828,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel',
         choices=['debug', 'info', 'warning', 'error'], default='info')
-    parser.add_argument('--timeout-event', type=int, default=10)
-    parser.add_argument('--timeout-rest', type=int, default=30)
-    parser.add_argument('--timeout-gui', type=int, default=5)
+    parser.add_argument('--timeout-event', type=int, default=10, metavar='N',
+        help='Interval for polling event interface, in seconds. Default: %(default)s')
+    parser.add_argument('--timeout-rest', type=int, default=30, metavar='N',
+        help='Interval for polling REST interface, in seconds. Default: %(default)s')
+    parser.add_argument('--timeout-gui', type=int, default=5, metavar='N',
+        help='Interval for refreshing GUI, in seconds. Default: %(default)s')
+    parser.add_argument('--no-shutdown', action='store_true',
+        help='Hide Start, Restart, and Shutdown Syncthing menus')
 
     args = parser.parse_args()
     for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
@@ -846,5 +854,5 @@ if __name__ == '__main__':
     requests_log.setLevel(log.WARNING)
     requests_log.propagate = True
 
-    app = Main()
+    app = Main(args)
     Gtk.main()
