@@ -419,13 +419,14 @@ class Main(object):
     def event_starting(self, event):
         self.set_state('paused')
         log.info('Received that Syncthing was starting at %s' % event['time'])
+        # Check for added/removed devices or folders.
+        GLib.idle_add(self.rest_get, '/rest/system/config')
+        GLib.idle_add(self.rest_get, '/rest/system/version')
 
     def event_startupcomplete(self, event):
         self.set_state('idle')
         log.info('Syncthing startup complete at %s' %
             self.convert_time(event['time']))
-        # Check config for added/removed devices or folders.
-        GLib.idle_add(self.rest_get, '/rest/system/config')
 
     def event_ping(self, event):
         self.last_ping = dateutil.parser.parse(event['time'])
