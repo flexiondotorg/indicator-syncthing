@@ -330,6 +330,7 @@ class Main(object):
             return
         except (requests.exceptions.Timeout, socket.timeout):
             log.debug('Timeout')
+            # Timeout may be because Syncthing restarted and event ID reset.
             GLib.idle_add(self.rest_get, '/rest/system/status')
             return
         except Exception as e:
@@ -493,11 +494,9 @@ class Main(object):
         self.recent_files.insert(0, file_details)
         self.recent_files = self.recent_files[:20]
         self.state['update_files'] = True
-
     # end of the event processing dings
 
     # begin REST processing functions
-
     def process_rest_system_connections(self, data):
         for elem in data['connections']:
             for dev in self.devices:
@@ -537,12 +536,14 @@ class Main(object):
         self.state['update_st_running'] = True
 
     def process_rest_system_upgrade(self, data):
+        self.syncthing_version = data['running']
         if data['newer']:
             self.syncthing_upgrade_menu.set_label(
-                'New version available: {}'.format(data['latest']))
+                'New version available: %s' % data['latest'])
             self.syncthing_upgrade_menu.show()
         else:
             self.syncthing_upgrade_menu.hide()
+        self.state['update_st_running'] = True
 
     def process_rest_system_version(self, data):
         self.syncthing_version = data['version']
@@ -727,13 +728,17 @@ class Main(object):
         except Exception as e:
             log.error("Couldn't run {}: {}".format(cmd, e))
             return
+        GLib.idle_add(self.rest_get, '/rest/system/status')
+        GLib.idle_add(self.rest_get, '/rest/system/version')
         self.state['update_st_running'] = True
 
     def syncthing_restart(self, *args):
         self.rest_post('/rest/system/restart')
+        GLib.idle_add(self.rest_get, '/rest/system/status')
 
     def syncthing_shutdown(self, *args):
         self.rest_post('/rest/system/shutdown')
+        GLib.idle_add(self.rest_get, '/rest/system/status')
 
     def convert_time(self, time):
         return dateutil.parser.parse(time).strftime('%x %X')
