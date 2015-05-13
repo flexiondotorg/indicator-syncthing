@@ -702,8 +702,9 @@ class Main(object):
 
     def update_st_running(self):
         if self.count_connection_error <= 1:
-            self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
-                self.syncthing_version, self.device_name))
+            if self.syncthing_version and self.device_name:
+                self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
+                    self.syncthing_version, self.device_name))
             self.mi_start_syncthing.set_sensitive(False)
             self.mi_restart_syncthing.set_sensitive(True)
             self.mi_shutdown_syncthing.set_sensitive(True)
