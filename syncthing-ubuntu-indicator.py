@@ -341,7 +341,11 @@ class Main(object):
         if r.status_code != 200:
             log.warning('rest_receive_data: {0} failed ({1})'.format(
                 rest_path, r.status_code))
-            self.set_state('error')
+            if r.url == '/rest/system/upgrade':
+                # Debian/Ubuntu packages of Syncthing have this disabled
+                pass
+            else:
+                self.set_state('error')
             if rest_path == '/rest/system/ping':
                 # Basic version check: try the old REST path
                 GLib.idle_add(self.rest_get, '/rest/ping')
