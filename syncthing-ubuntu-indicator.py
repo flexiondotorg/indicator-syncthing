@@ -186,7 +186,6 @@ class Main(object):
 
         self.ind.set_menu(self.menu)
 
-
     def load_config_begin(self):
         ''' Read needed values from config file '''
         confdir = GLib.get_user_config_dir()
@@ -284,7 +283,6 @@ class Main(object):
         GLib.timeout_add_seconds(TIMEOUT_REST, self.timeout_rest)
         GLib.timeout_add_seconds(TIMEOUT_EVENT, self.timeout_events)
 
-
     def syncthing_url(self, url):
         ''' Creates a url from given values and the address read from file '''
         return urlparse.urljoin(self.syncthing_base, url)
@@ -294,7 +292,6 @@ class Main(object):
 
     def open_releases_page(self, *args):
         webbrowser.open('https://github.com/syncthing/syncthing/releases')
-
 
     def rest_post(self, rest_path):
         log.debug('rest_post {}'.format(rest_path))
@@ -375,7 +372,6 @@ class Main(object):
                 'process_{}'.format(rest_path.strip('/').replace('/','_'))
                 )(json_data)
 
-
     # processing of the events coming from the event interface
     def process_event(self, event):
         t = event.get('type').lower()
@@ -422,14 +418,13 @@ class Main(object):
 
     def event_startupcomplete(self, event):
         self.set_state('idle')
-        time = self.convert_time(event['time'])
-        log.debug('Startup done at %s' % time)
+        log.info('Syncthing startup complete at %s' %
+            self.convert_time(event['time']))
         # Check config for added/removed devices or folders.
         GLib.idle_add(self.rest_get, '/rest/system/config')
 
     def event_ping(self, event):
         self.last_ping = dateutil.parser.parse(event['time'])
-        log.debug('A ping was sent at %s' % self.last_ping.strftime('%H:%M'))
 
     def event_devicediscovered(self, event):
         found = False
@@ -567,9 +562,7 @@ class Main(object):
             self.set_state('error')
         else:
             self.mi_errors.hide()
-
     # end of the REST processing functions
-
 
     def update(self):
         for func in self.state:
@@ -715,10 +708,8 @@ class Main(object):
             self.mi_restart_syncthing.set_sensitive(False)
             self.mi_shutdown_syncthing.set_sensitive(False)
 
-
     def count_connected(self):
         return len([e for e in self.devices if e['connected']])
-
 
     def syncthing_start(self, *args):
         cmd = os.path.join(self.wd, 'start-syncthing.sh')
@@ -729,23 +720,18 @@ class Main(object):
             log.error("Couldn't run {}: {}".format(cmd, e))
             return
         self.state['update_st_running'] = True
-        self.last_seen_id = 0
 
     def syncthing_restart(self, *args):
         self.rest_post('/rest/system/restart')
-        self.last_seen_id = 0
 
     def syncthing_shutdown(self, *args):
         self.rest_post('/rest/system/shutdown')
-        self.last_seen_id = 0
-
 
     def convert_time(self, time):
         return dateutil.parser.parse(time).strftime('%x %X')
 
     def calc_speed(self, old, new):
         return old / (new * 10)
-
 
     def license(self):
         with open(os.path.join(self.wd, 'LICENSE'), 'r') as f:
@@ -765,7 +751,6 @@ class Main(object):
         dialog.run()
         dialog.destroy()
 
-
     def set_state(self, s=None):
         if not s:
             s = self.state['set_icon']
@@ -776,7 +761,6 @@ class Main(object):
             self.state['set_icon'] = 'paused'
         else:
             self.state['set_icon'] = self.folder_check_state()
-
 
     def folder_check_state(self):
         state = {'syncing': 0, 'idle': 0, 'cleaning': 0, 'scanning': 0,
@@ -792,7 +776,6 @@ class Main(object):
         else:
             return 'idle'
 
-
     def set_icon(self):
         icon = {
         'updating': {'name': 'syncthing-client-updating', 'descr': 'Updating'},
@@ -807,12 +790,9 @@ class Main(object):
         self.ind.set_attention_icon(icon[self.state['set_icon']]['name'])
         self.ind.set_icon_full(icon[self.state['set_icon']]['name'],
                                icon[self.state['set_icon']]['descr'])
-        #GLib.timeout_add_seconds(1, self.set_icon)
-
 
     def leave(self, widget):
         Gtk.main_quit()
-
 
     def timeout_rest(self):
         self.timeout_counter = (self.timeout_counter + 1) % 10
