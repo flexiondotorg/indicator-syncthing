@@ -22,6 +22,7 @@ from xml.dom import minidom
 
 VERSION = 'v0.3.0'
 
+
 def shorten_path(text, maxlength=80):
     if len(text) <= maxlength:
         return text
@@ -38,7 +39,7 @@ def shorten_path(text, maxlength=80):
 class Main(object):
     def __init__(self, args):
         log.info('Started main procedure')
-        self.args=args
+        self.args = args
         self.wd = os.path.normpath(os.path.abspath(os.path.split(__file__)[0]))
         self.icon_path = os.path.join(self.wd, 'icons')
         self.ind = appindicator.Indicator.new_with_path(
@@ -70,20 +71,12 @@ class Main(object):
         self.last_seen_id = 0
         self.timeout_counter = 0
         self.count_connection_error = 0
-
         self.session = FuturesSession()
 
         GLib.idle_add(self.load_config_begin)
 
-
     def create_menu(self):
         self.menu = Gtk.Menu()
-
-        #self.last_checked_menu = Gtk.MenuItem('Last checked: ?')
-        #self.last_checked_menu.show()
-        #self.last_checked_menu.set_sensitive(False)
-        #self.menu.append(self.last_checked_menu)
-        #self.update_last_checked(datetime.datetime.now(pytz.utc).isoformat())
 
         self.title_menu = Gtk.MenuItem('Syncthing')
         self.title_menu.show()
@@ -127,7 +120,7 @@ class Main(object):
         self.current_files_submenu = Gtk.Menu()
         self.current_files_menu.set_submenu(self.current_files_submenu)
 
-        self.recent_files_menu = Gtk.MenuItem('Recently downloaded')
+        self.recent_files_menu = Gtk.MenuItem('Recently updated')
         self.recent_files_menu.show()
         self.recent_files_menu.set_sensitive(False)
         self.menu.append(self.recent_files_menu)
@@ -279,9 +272,9 @@ class Main(object):
         GLib.idle_add(self.rest_get, '/rest/system/upgrade')
         GLib.idle_add(self.rest_get, '/rest/system/error')
         GLib.idle_add(self.rest_get, '/rest/events')
-        GLib.timeout_add_seconds(TIMEOUT_GUI, self.update)
-        GLib.timeout_add_seconds(TIMEOUT_REST, self.timeout_rest)
-        GLib.timeout_add_seconds(TIMEOUT_EVENT, self.timeout_events)
+        GLib.timeout_add_seconds(self.args.timeout_gui, self.update)
+        GLib.timeout_add_seconds(self.args.timeout_rest, self.timeout_rest)
+        GLib.timeout_add_seconds(self.args.timeout_event, self.timeout_events)
 
     def syncthing_url(self, url):
         ''' Creates a url from given values and the address read from file '''
@@ -321,9 +314,9 @@ class Main(object):
         except requests.exceptions.ConnectionError:
             log.error(
                 "Couldn't connect to Syncthing REST interface at {}".format(
-                self.syncthing_url('')))
+                    self.syncthing_base))
             self.count_connection_error += 1
-            log.info('count_connection_error: %s' % self.count_connection_error)
+            log.info('count_connection_error: {}'.format(self.count_connection_error))
             if self.count_connection_error > 1:
                 self.state['update_st_running'] = True
                 self.set_state('paused')
@@ -342,8 +335,8 @@ class Main(object):
         if r.status_code != 200:
             log.warning('rest_receive_data: {0} failed ({1})'.format(
                 rest_path, r.status_code))
-            if r.url == '/rest/system/upgrade':
-                # Debian/Ubuntu packages of Syncthing have this disabled
+            if rest_path == '/rest/system/upgrade':
+                # Debian/Ubuntu Syncthing packages disable upgrade check
                 pass
             else:
                 self.set_state('error')
@@ -361,21 +354,22 @@ class Main(object):
 
         # Receiving data appears to have succeeded
         self.count_connection_error = 0
-        self.set_state('idle') # TODO: fix this
+        self.set_state('idle')  # TODO: fix this
         log.debug('rest_receive_data: {} {}'.format(rest_path, rest_query))
         if rest_path == '/rest/events':
             try:
                 for qitem in json_data:
                     self.process_event(qitem)
             except Exception as e:
-                log.warning('rest_receive_data: error processing event ({})'.format(e))
+                log.warning(
+                    'rest_receive_data: error processing event ({})'.format(e))
                 log.debug(qitem)
                 self.set_state('error')
         else:
             fn = getattr(
-                self,
-                'process_{}'.format(rest_path.strip('/').replace('/','_'))
-                )(json_data)
+                    self,
+                    'process_{}'.format(rest_path.strip('/').replace('/', '_'))
+                    )(json_data)
 
     # processing of the events coming from the event interface
     def process_event(self, event):
@@ -438,7 +432,7 @@ class Main(object):
             if elm['id'] == event['data']['device']:
                 elm['state'] = 'discovered'
                 found = True
-        if found == False:
+        if not found:
             log.warn('unknown device discovered')
             self.devices.append({
                 'id': event['data']['device'],
@@ -648,10 +642,10 @@ class Main(object):
             self.recent_files_menu.set_sensitive(True)
             for child in self.recent_files_submenu.get_children():
                 self.recent_files_submenu.remove(child)
-            icons = {'delete': u'\u2612', # [x]
-                     'update': u'\u2193', # down arrow
-                     'dir': u'\U0001f4c1', # folder
-                     'file': u'\U0001f4c4', # file
+            icons = {'delete': u'\u2612',    # [x]
+                     'update': u'\u2193',    # down arrow
+                     'dir': u'\U0001f4c1',   # folder
+                     'file': u'\U0001f4c4',  # file
                      }
             for f in self.recent_files:
                 mi = Gtk.MenuItem(
@@ -706,6 +700,8 @@ class Main(object):
             if self.syncthing_version and self.device_name:
                 self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
                     self.syncthing_version, self.device_name))
+            else:
+                self.title_menu.set_label(u'Syncthing')
             self.mi_start_syncthing.set_sensitive(False)
             self.mi_restart_syncthing.set_sensitive(True)
             self.mi_shutdown_syncthing.set_sensitive(True)
@@ -846,9 +842,6 @@ if __name__ == '__main__':
     for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
         if arg < 1:
             sys.exit('Timeouts must be integers greater than 0')
-    TIMEOUT_EVENT = args.timeout_event
-    TIMEOUT_REST = args.timeout_rest
-    TIMEOUT_GUI = args.timeout_gui
 
     loglevels = {'debug': log.DEBUG, 'info': log.INFO,
                  'warning': log.WARNING, 'error': log.ERROR}
