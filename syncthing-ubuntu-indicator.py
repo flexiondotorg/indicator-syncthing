@@ -186,7 +186,8 @@ class Main(object):
             confdir = os.path.expanduser('~/.config')
         conffile = os.path.join(confdir, 'syncthing', 'config.xml')
         if not os.path.isfile(conffile):
-            log.error('load_config_begin: Couldn\'t find config file.')
+            log.error("load_config_begin: Couldn't find config file {}".format(
+                conffile))
         f = Gio.file_new_for_path(conffile)
         f.load_contents_async(None, self.load_config_finish)
         return False
@@ -194,75 +195,57 @@ class Main(object):
     def load_config_finish(self, fp, async_result):
         try:
             success, data, etag = fp.load_contents_finish(async_result)
-        except:
-            log.error('Couldn\'t open config file')
-            self.leave()
 
-        try:
             dom = minidom.parseString(data)
-        except:
-            log.error('Couldn\'t parse config file')
-            self.leave()
 
-        conf = dom.getElementsByTagName('configuration')
-        if not conf:
-            log.error('No configuration element in config')
-            self.leave()
+            conf = dom.getElementsByTagName('configuration')
+            if not conf:
+                raise Exception('No configuration element in config')
 
-        gui = conf[0].getElementsByTagName('gui')
-        if not gui:
-            log.error('No gui element in config')
-            self.leave()
+            gui = conf[0].getElementsByTagName('gui')
+            if not gui:
+                raise Exception('No gui element in config')
 
-        # find the local syncthing address
-        address = gui[0].getElementsByTagName('address')
-        if not address:
-            log.error('No address element in config')
-            self.leave()
-        if not address[0].hasChildNodes():
-            log.error('No address specified in config')
-            self.leave()
+            # Find the local syncthing address
+            address = gui[0].getElementsByTagName('address')
+            if not address:
+                raise Exception('No address element in config')
+            if not address[0].hasChildNodes():
+                raise Exception('No address specified in config')
 
-        self.syncthing_base = 'http://%s' % address[0].firstChild.nodeValue
+            self.syncthing_base = 'http://%s' % address[0].firstChild.nodeValue
 
-        # find and fetch the api key
-        api_key = gui[0].getElementsByTagName('apikey')
-        if not api_key:
-            log.error('No api-key element in config')
-            self.leave()
-        if not api_key[0].hasChildNodes():
-            log.error('No api-key specified in config, please create one via the web interface')
-            self.leave()
-        self.api_key = api_key[0].firstChild.nodeValue
+            # Find and fetch the api key
+            api_key = gui[0].getElementsByTagName('apikey')
+            if not api_key:
+                raise Exception('No api-key element in config')
+            if not api_key[0].hasChildNodes():
+                raise Exception('No api-key specified in config, please create one via the web interface')
+            self.api_key = api_key[0].firstChild.nodeValue
 
-        # read device names from config
-        deviceids = conf[0].getElementsByTagName('device')
-        try:
-            for elem in deviceids:
-                if elem.hasAttribute('name') and elem.hasAttribute('id'):
+            # Read folders and devices from config
+            for elem in conf[0].childNodes:
+                if elem.nodeType != minidom.Node.ELEMENT_NODE:
+                    continue
+                if elem.tagName == 'device':
                     self.devices.append({
                         'id': elem.getAttribute('id'),
                         'name': elem.getAttribute('name'),
-                        'compression': elem.getAttribute('compression'),
                         'state': '',
                         'connected': False
                         })
-        except:
-            log.error('config has no devices configured')
-            self.leave()
-
-        # read folders from config
-        folders = conf[0].getElementsByTagName('folder')
-        try:
-            for elem in folders:
-                if elem.hasAttribute('id') and elem.hasAttribute('path'):
+                elif elem.tagName == 'folder':
                     self.folders.append({
                         'id': elem.getAttribute('id'),
                         'path': elem.getAttribute('path'),
                         'state': 'unknown',
                         })
-        except:
-            log.error('config has no folders configured')
+            if not self.devices:
+                raise Exception('No devices in config')
+            if not self.folders:
+                raise Exception('No folders in config')
+        except Exception as e:
+            log.error('Error parsing config file: {}'.format(e))
             self.leave()
 
         # Start processes
