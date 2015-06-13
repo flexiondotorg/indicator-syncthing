@@ -273,7 +273,8 @@ class Main(object):
         log.debug('rest_post {}'.format(rest_path))
         headers = {'X-API-Key': self.api_key}
         if rest_path in ['/rest/system/restart', '/rest/system/shutdown']:
-            f = self.session.post(self.syncthing_url(rest_path), headers=headers)
+            f = self.session.post(
+                self.syncthing_url(rest_path), headers=headers)
         return False
 
     def rest_get(self, rest_path):
@@ -593,7 +594,7 @@ class Main(object):
                         self.devices_submenu.append(mi)
                         mi.show()
         else:
-            self.devices_menu.set_label('No devices)')
+            self.devices_menu.set_label('No devices')
             self.devices_menu.set_sensitive(False)
         self.state['update_devices'] = False
 
@@ -711,10 +712,10 @@ class Main(object):
         return len([e for e in self.devices if e['connected']])
 
     def syncthing_start(self, *args):
-        cmd = os.path.join(self.wd, 'start-syncthing.sh')
+        cmd = [os.path.join(self.wd, 'start-syncthing.sh')]
         log.info('Starting {}'.format(cmd))
         try:
-            proc = subprocess.Popen([cmd])
+            proc = subprocess.Popen(cmd)
         except Exception as e:
             log.error("Couldn't run {}: {}".format(cmd, e))
             return
@@ -743,7 +744,8 @@ class Main(object):
 
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
-        dialog.set_default_icon_from_file(os.path.join(self.icon_path, 'syncthing-client-idle.svg'))
+        dialog.set_default_icon_from_file(
+            os.path.join(self.icon_path, 'syncthing-client-idle.svg'))
         dialog.set_logo(None)
         dialog.set_program_name('Syncthing Ubuntu Indicator')
         dialog.set_version(VERSION)
