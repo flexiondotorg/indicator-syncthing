@@ -20,7 +20,7 @@ from gi.repository import Gtk, Gio, GLib
 from gi.repository import AppIndicator3 as appindicator
 from xml.dom import minidom
 
-VERSION = 'v0.3.0'
+VERSION = 'v0.3.1'
 
 
 def shorten_path(text, maxlength=80):
@@ -510,7 +510,9 @@ class Main(object):
         if data['uptime'] < self.system_data.get('uptime', 0):
             # Means that Syncthing restarted
             self.last_seen_id = 0
+            GLib.idle_add(self.rest_get, '/rest/system/version')
         self.system_data = data
+        # TODO: check status of global announce
         self.state['update_st_running'] = True
 
     def process_rest_system_upgrade(self, data):
@@ -704,6 +706,13 @@ class Main(object):
             self.title_menu.set_label('Could not connect to Syncthing')
             for dev in self.devices:
                 dev['connected'] = False
+            self.state['update_devices'] = True
+            for f in self.folders:
+                f['state'] = 'unknown'
+            self.state['update_folders'] = True
+            self.errors = []
+            self.mi_errors.hide()
+            self.set_state()
             self.mi_start_syncthing.set_sensitive(True)
             self.mi_restart_syncthing.set_sensitive(False)
             self.mi_shutdown_syncthing.set_sensitive(False)
@@ -805,7 +814,7 @@ class Main(object):
             GLib.idle_add(self.rest_get, '/rest/system/connections')
             GLib.idle_add(self.rest_get, '/rest/system/status')
             GLib.idle_add(self.rest_get, '/rest/system/error')
-            if self.timeout_counter == 0:
+            if self.timeout_counter == 0 or not self.syncthing_version:
                 GLib.idle_add(self.rest_get, '/rest/system/upgrade')
                 GLib.idle_add(self.rest_get, '/rest/system/version')
         else:
