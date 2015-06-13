@@ -615,6 +615,11 @@ class Main(object):
                     f['folder'],
                     shorten_path(f['file'])))
                 self.current_files_submenu.append(mi)
+                mi.connect(
+                    'activate',
+                    self.open_file_browser,
+                    os.path.split(
+                        self.get_full_path(f['folder'], f['file']))[0])
                 mi.show()
             self.current_files_menu.show()
 
@@ -640,6 +645,11 @@ class Main(object):
                         )
                     )
                 self.recent_files_submenu.append(mi)
+                mi.connect(
+                    'activate',
+                    self.open_file_browser,
+                    os.path.split(
+                        self.get_full_path(f['folder'], f['file']))[0])
                 mi.show()
             self.recent_files_menu.show()
         self.state['update_files'] = False
@@ -672,6 +682,7 @@ class Main(object):
                 for elm in self.folders:
                     folder_maxlength = max(folder_maxlength, len(elm['id']))
                     mi = Gtk.MenuItem(elm['id'].ljust(folder_maxlength + 20))
+                    mi.connect('activate', self.open_file_browser, elm['path'])
                     self.folder_menu_submenu.append(mi)
                     mi.show()
         else:
@@ -803,6 +814,21 @@ class Main(object):
         if self.count_connection_error == 0:
             GLib.idle_add(self.rest_get, '/rest/events')
         return True
+
+    def open_file_browser(self, menuitem, path):
+        if not os.path.isdir(path):
+            log.debug('Not a directory, or does not exist: {}'.format(path))
+            return
+        try:
+            proc = subprocess.Popen(['xdg-open', path])
+        except Exception as e:
+            log.error("Couldn't open file browser for {} ({})".format(path, e))
+
+    def get_full_path(self, folder, item):
+        for elem in self.folders:
+            if elem['id'] == folder:
+                a = elem['path']
+        return os.path.join(a, item)
 
 
 if __name__ == '__main__':
