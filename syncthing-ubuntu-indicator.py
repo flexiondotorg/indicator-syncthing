@@ -35,6 +35,14 @@ def shorten_path(text, maxlength=80):
             return '.../' + tail
     return head + '/.../' + tail
 
+def human_readable(num):
+    for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB']:
+        if abs(num) < 1024.0:
+            f = '{:.1f}'.format(num).rstrip('0').rstrip('.')
+            return '{} {}'.format(f, unit)
+        num = num / 1024.0
+    return '{:.1f} {}'.format(num, 'YiB')
+
 
 class Main(object):
     def __init__(self, args):
@@ -670,13 +678,14 @@ class Main(object):
                                 mi.set_label('{} (scanning)'.format(elm['id']))
                             elif elm['state'] == 'syncing':
                                 if elm.get('needFiles') > 1:
-                                    lbltext = '{fid} (syncing {num} files)'
+                                    lbltext = '{fid} (syncing {num} files, {bytes})'
                                 elif elm.get('needFiles') == 1:
-                                    lbltext = '{fid} (syncing {num} file)'
+                                    lbltext = '{fid} (syncing {num} file, {bytes})'
                                 else:
                                     lbltext = '{fid} (syncing)'
                                 mi.set_label(lbltext.format(
-                                    fid=elm['id'], num=elm.get('needFiles')))
+                                    fid=elm['id'], num=elm.get('needFiles'),
+                                    bytes=human_readable(elm.get('needBytes'))))
                             else:
                                 mi.set_label(elm['id'].ljust(folder_maxlength + 20))
             else:
