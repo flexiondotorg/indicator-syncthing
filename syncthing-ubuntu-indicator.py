@@ -794,7 +794,7 @@ class Main(object):
 
         if state['syncing'] > 0:
             return 'syncing'
-        elif state['scanning'] > 0 or state['cleaning'] > 0:
+        elif state['cleaning'] > 0:
             return 'scanning'
         else:
             return 'idle'
