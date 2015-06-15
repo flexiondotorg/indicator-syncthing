@@ -750,7 +750,7 @@ class Main(object):
         GLib.idle_add(self.rest_get, '/rest/system/status')
 
     def convert_time(self, time):
-        return dateutil.parser.parse(time).strftime('%x %X')
+        return dateutil.parser.parse(time).strftime(self.args.timeformat)
 
     def calc_speed(self, old, new):
         return old / (new * 10)
@@ -866,6 +866,10 @@ if __name__ == '__main__':
         help='Interval for refreshing GUI, in seconds. Default: %(default)s')
     parser.add_argument('--no-shutdown', action='store_true',
         help='Hide Start, Restart, and Shutdown Syncthing menus')
+    parser.add_argument('--timeformat', type=str, default='%x %X',
+        metavar='FORMAT',
+        help='Format to display date and time. See `man strftime` for help. '
+            "Default: '%(default)s'")
 
     args = parser.parse_args()
     for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
