@@ -194,8 +194,9 @@ class Main(object):
             confdir = os.path.expanduser('~/.config')
         conffile = os.path.join(confdir, 'syncthing', 'config.xml')
         if not os.path.isfile(conffile):
-            log.error("load_config_begin: Couldn't find config file {}".format(
+            log.error("Couldn't find config file {}".format(
                 conffile))
+            self.leave()
         f = Gio.file_new_for_path(conffile)
         f.load_contents_async(None, self.load_config_finish)
         return False
@@ -226,9 +227,9 @@ class Main(object):
             # Find and fetch the api key
             api_key = gui[0].getElementsByTagName('apikey')
             if not api_key:
-                raise Exception('No api-key element in config')
+                raise Exception('No apikey element in config')
             if not api_key[0].hasChildNodes():
-                raise Exception('No api-key specified in config, please create one via the web interface')
+                raise Exception('No apikey specified in config, please create one via the web interface')
             self.api_key = api_key[0].firstChild.nodeValue
 
             # Read folders and devices from config
@@ -305,7 +306,7 @@ class Main(object):
             r = future.result()
         except requests.exceptions.ConnectionError:
             log.error(
-                "Couldn't connect to Syncthing REST interface at {}".format(
+                "Couldn't connect to Syncthing at {}".format(
                     self.syncthing_base))
             self.count_connection_error += 1
             log.info('count_connection_error: {}'.format(self.count_connection_error))
