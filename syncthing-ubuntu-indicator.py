@@ -72,7 +72,7 @@ class Main(object):
         self.errors = []
 
         self.last_ping = None
-        self.system_data = {}
+        self.system_status = {}
         self.syncthing_base = 'http://localhost:8080'
         self.syncthing_version = ''
         self.device_name = ''
@@ -516,11 +516,11 @@ class Main(object):
         self.devices = newdevices
 
     def process_rest_system_status(self, data):
-        if data['uptime'] < self.system_data.get('uptime', 0):
+        if data['uptime'] < self.system_status.get('uptime', 0):
             # Means that Syncthing restarted
             self.last_seen_id = 0
             GLib.idle_add(self.rest_get, '/rest/system/version')
-        self.system_data = data
+        self.system_status = data
         # TODO: check status of global announce
         self.state['update_st_running'] = True
 
