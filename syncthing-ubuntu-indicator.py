@@ -423,6 +423,9 @@ class Main(object):
         self.set_state('idle')
         log.info('Syncthing startup complete at %s' %
             self.convert_time(event['time']))
+        if event['data'] != None:
+            self.system_status['myID'] = event['data'].get('myID')
+        log.info('myID: %s' % self.system_status.get('myID'))
 
     def event_ping(self, event):
         self.last_ping = dateutil.parser.parse(event['time'])
