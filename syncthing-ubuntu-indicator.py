@@ -710,7 +710,7 @@ class Main(object):
                                     lbltext = '{fid} (syncing)'
                                 mi.set_label(lbltext.format(
                                     fid=elm['id'], num=elm.get('needFiles'),
-                                    bytes=human_readable(elm.get('needBytes'))))
+                                    bytes=human_readable(elm.get('needBytes', 0))))
                             else:
                                 mi.set_label(elm['id'].ljust(folder_maxlength + 20))
             else:
@@ -862,7 +862,7 @@ class Main(object):
         self.ind.set_icon_full(icon[self.state['set_icon']]['name'],
                                icon[self.state['set_icon']]['descr'])
 
-    def leave(self, widget):
+    def leave(self, *args):
         Gtk.main_quit()
 
     def timeout_rest(self):
