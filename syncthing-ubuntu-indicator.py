@@ -552,6 +552,12 @@ class Main(object):
             log.error('Syncthing v0.11 (or higher) required. Exiting.')
             self.leave()
 
+    def process_rest_stats_device(self, data):
+        for item in data:
+            for dev in self.devices:
+                if dev['id'] == item:
+                    dev['lastSeen'] = data[item]['lastSeen']
+
     def process_rest_system_error(self, data):
         self.errors = data['errors']
         if self.errors:
@@ -828,10 +834,11 @@ class Main(object):
 
     def timeout_rest(self):
         self.timeout_counter = (self.timeout_counter + 1) % 10
-        if self.count_connection_error == 0:
+        if self.count_connection_error <= 1:
             GLib.idle_add(self.rest_get, '/rest/system/connections')
             GLib.idle_add(self.rest_get, '/rest/system/status')
             GLib.idle_add(self.rest_get, '/rest/system/error')
+            GLib.idle_add(self.rest_get, '/rest/stats/device')
             if self.timeout_counter == 0 or not self.syncthing_version:
                 GLib.idle_add(self.rest_get, '/rest/system/upgrade')
                 GLib.idle_add(self.rest_get, '/rest/system/version')
