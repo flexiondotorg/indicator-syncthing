@@ -241,7 +241,8 @@ class Main(object):
                         'id': elem.getAttribute('id'),
                         'name': elem.getAttribute('name'),
                         'state': '',
-                        'connected': False
+                        'connected': False,
+                        'lastSeen': '',
                         })
                 elif elem.tagName == 'folder':
                     self.folders.append({
@@ -510,6 +511,7 @@ class Main(object):
                 'name': elem['name'],
                 'state': '',
                 'connected': False,
+                'lastSeen': '',
                 })
 
         self.folders = newfolders
@@ -577,37 +579,43 @@ class Main(object):
             self.last_seen_id = lsi
 
     def update_devices(self):
-        if self.devices:
-            # TODO: set icon if zero devices are connected
-            self.devices_menu.set_label('Devices ({}/{})'.format(
-                self.count_connected(), len(self.devices) - 1))
-            self.devices_menu.set_sensitive(True)
-
-            if len(self.devices_submenu) == len(self.devices) - 1:
-                # Update the devices menu
-                for mi in self.devices_submenu:
-                    for elm in self.devices:
-                        if mi.get_label().split(' ')[0] == elm['name']:
-                            mi.set_label(elm['name'])
-                            mi.set_sensitive(elm['connected'])
-            else:
-                # Repopulate the devices menu
-                for child in self.devices_submenu.get_children():
-                    self.devices_submenu.remove(child)
-
-                for elm in sorted(self.devices, key=lambda elm: elm['name']):
-                    if elm['id'] == self.system_data.get('myID', None):
-                        self.device_name = elm['name']
-                        self.state['update_st_running'] = True
-                    else:
-                        mi = Gtk.MenuItem(elm['name'])
-                        mi.set_sensitive(elm['connected'])
-                        self.devices_submenu.append(mi)
-                        mi.show()
-        else:
+        self.state['update_devices'] = False
+        if not self.devices:
             self.devices_menu.set_label('No devices')
             self.devices_menu.set_sensitive(False)
-        self.state['update_devices'] = False
+            return
+
+        # TODO: set icon if zero devices are connected
+        self.devices_menu.set_label('Devices ({}/{})'.format(
+            self.count_connected(), len(self.devices) - 1))
+        self.devices_menu.set_sensitive(True)
+
+        # TODO: use a better check here, in case devices changed but count
+        # stayed the same
+        if len(self.devices_submenu) != len(self.devices) - 1:
+            # Repopulate the devices menu
+            for child in self.devices_submenu.get_children():
+                self.devices_submenu.remove(child)
+            for elm in sorted(self.devices, key=lambda elm: elm['name']):
+                if elm['id'] == self.system_status.get('myID', None):
+                    self.device_name = elm['name']
+                    self.state['update_st_running'] = True
+                else:
+                    mi = Gtk.MenuItem(elm['name'])
+                    self.devices_submenu.append(mi)
+                    mi.show()
+
+        # Set menu item labels
+        for mi in self.devices_submenu:
+            for dev in self.devices:
+                if mi.get_label().split()[0] == dev['name']:
+                    if dev['connected']:
+                        mi.set_label(dev['name'])
+                    else:
+                        mi.set_label('{} (Last seen {})'.format(
+                            dev['name'],
+                            self.convert_time(dev['lastSeen'])))
+                    mi.set_sensitive(dev['connected'])
 
     def update_files(self):
         self.current_files_menu.set_label(u'Downloading %s files' % (
