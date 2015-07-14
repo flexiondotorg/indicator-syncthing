@@ -9,6 +9,7 @@ import logging as log
 import os
 import subprocess
 import sys
+import time
 import urlparse
 import webbrowser
 
@@ -80,6 +81,7 @@ class Main(object):
         self.timeout_counter = 0
         self.count_connection_error = 0
         self.session = FuturesSession()
+        self.current_action = (None, None)
 
         GLib.idle_add(self.load_config_begin)
 
@@ -311,6 +313,8 @@ class Main(object):
                     self.syncthing_base))
             self.count_connection_error += 1
             log.info('count_connection_error: {}'.format(self.count_connection_error))
+            if self.current_action[0] == 'syncthing_shutdown':
+                self.current_action = (None, None)
             if self.count_connection_error > 1:
                 self.state['update_st_running'] = True
                 self.set_state('paused')
@@ -348,6 +352,9 @@ class Main(object):
 
         # Receiving data appears to have succeeded
         self.count_connection_error = 0
+        if self.current_action[0]:
+            self.current_action = (None, None)
+            self.state['update_st_running'] = True
         self.set_state('idle')  # TODO: fix this
         log.debug('rest_receive_data: {} {}'.format(rest_path, rest_query))
         if rest_path == '/rest/events':
@@ -717,7 +724,9 @@ class Main(object):
         self.state['update_folders'] = False
 
     def update_st_running(self):
-        if self.count_connection_error <= 1:
+        if self.current_action[0]:
+            pass
+        elif self.count_connection_error <= 1:
             if self.syncthing_version and self.device_name:
                 self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
                     self.syncthing_version, self.device_name))
@@ -727,7 +736,7 @@ class Main(object):
             self.mi_restart_syncthing.set_sensitive(True)
             self.mi_shutdown_syncthing.set_sensitive(True)
         else:
-            self.title_menu.set_label('Could not connect to Syncthing')
+            self.title_menu.set_label('Syncthing is not running')
             for dev in self.devices:
                 dev['connected'] = False
             self.state['update_devices'] = True
@@ -745,6 +754,13 @@ class Main(object):
         return len([e for e in self.devices if e['connected']])
 
     def syncthing_start(self, *args):
+        self.mi_start_syncthing.set_sensitive(False)
+        self.mi_restart_syncthing.set_sensitive(False)
+        self.mi_shutdown_syncthing.set_sensitive(False)
+        self.current_action = ('syncthing_start', time.time())
+        self.title_menu.set_label('Starting Syncthing...')
+        self.syncthing_version = None
+
         cmd = [os.path.join(self.wd, 'start-syncthing.sh')]
         log.info('Starting {}'.format(cmd))
         try:
@@ -752,20 +768,34 @@ class Main(object):
         except Exception as e:
             log.error("Couldn't run {}: {}".format(cmd, e))
             return
-        GLib.idle_add(self.rest_get, '/rest/system/status')
-        GLib.idle_add(self.rest_get, '/rest/system/version')
         self.state['update_st_running'] = True
 
     def syncthing_restart(self, *args):
+        self.mi_start_syncthing.set_sensitive(False)
+        self.mi_restart_syncthing.set_sensitive(False)
+        self.mi_shutdown_syncthing.set_sensitive(False)
+        self.current_action = ('syncthing_restart', time.time())
+        self.title_menu.set_label('Restarting Syncthing...')
+        self.syncthing_version = None
+
         self.rest_post('/rest/system/restart')
-        GLib.idle_add(self.rest_get, '/rest/system/status')
+        self.set_state('paused')
+        self.state['update_st_running'] = True
 
     def syncthing_shutdown(self, *args):
-        self.rest_post('/rest/system/shutdown')
-        GLib.idle_add(self.rest_get, '/rest/system/status')
+        self.mi_start_syncthing.set_sensitive(False)
+        self.mi_restart_syncthing.set_sensitive(False)
+        self.mi_shutdown_syncthing.set_sensitive(False)
+        self.current_action = ('syncthing_shutdown', time.time())
+        self.title_menu.set_label('Shutting down Syncthing...')
+        self.syncthing_version = None
 
-    def convert_time(self, time):
-        return dateutil.parser.parse(time).strftime(self.args.timeformat)
+        self.rest_post('/rest/system/shutdown')
+        self.set_state('paused')
+        self.state['update_st_running'] = True
+
+    def convert_time(self, _time):
+        return dateutil.parser.parse(_time).strftime(self.args.timeformat)
 
     def calc_speed(self, old, new):
         return old / (new * 10)
@@ -844,6 +874,9 @@ class Main(object):
                 GLib.idle_add(self.rest_get, '/rest/system/version')
         else:
             GLib.idle_add(self.rest_get, '/rest/system/status')
+        if self.current_action in ['syncthing_start', 'syncthing_restart']:
+            GLib.idle_add(self.rest_get, '/rest/system/upgrade')
+            GLib.idle_add(self.rest_get, '/rest/system/version')
         return True
 
     def timeout_events(self):
