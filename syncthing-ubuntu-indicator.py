@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -16,6 +16,10 @@ import webbrowser
 import pytz
 import requests   # used only to catch exceptions
 import socket     # used only to catch exceptions
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('AppIndicator3', '0.1')
+
 from requests_futures.sessions import FuturesSession
 from gi.repository import Gtk, Gio, GLib
 from gi.repository import AppIndicator3 as appindicator
@@ -295,7 +299,6 @@ class Main(object):
             params = {'since': self.last_seen_id}
 
         log.info('rest_get {} {}'.format(rest_path, params))
-        # url for the included testserver: http://localhost:5115
         headers = {'X-API-Key': self.api_key}
         f = self.session.get(self.syncthing_url(rest_path),
                              params=params,

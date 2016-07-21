@@ -14,7 +14,7 @@ dependencies
 ==========================
 
 * python2 AppIndicator3
-* python2 gtk 
+* python2 gtk
 * python-dateutil (python2 version)
 * python-tz (python2 version)
 * requests-futures (python2 version)
@@ -28,19 +28,25 @@ Tldr:
 in a directory of your choice:
 
     git clone https://github.com/icaruseffect/syncthing-ubuntu-indicator.git
-  
+
     cd syncthing-ubuntu-indicator
-  
+
     python2 ./syncthing-ubuntu-indicator.py
 
-When you are using GNOME3 you can move the icon with the [gnome-shell-extension-appindicator] in the upper notification bar. 
+When you are using GNOME3 you can move the icon with the [gnome-shell-extension-appindicator] in the upper notification bar.
 
 
 _On Ubuntu 14.04:_
 
-    sudo apt-get install python-pip python-tz 
-  
+    sudo apt-get install python-pip python-tz
+
     sudo pip install python-dateutil requests-futures
+
+_On Ubuntu 16.04:_
+
+    sudo apt install python-gobject python-pip python-tz
+    
+    sudo -H pip install python-dateutil requests-futures
 
   this should result in the installation of the following packages:
   * python-colorama
@@ -65,4 +71,3 @@ _On Ubuntu 14.04:_
 [gnome-shell-extension-appindicator]: https://github.com/rgcjonas/gnome-shell-extension-appindicator
 
 [gnome-extensions-appindicator]: https://extensions.gnome.org/extension/615/appindicator-support/
-
