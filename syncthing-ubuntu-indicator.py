@@ -630,10 +630,11 @@ class Main(object):
                 if mi.get_label().split()[0] == dev['name']:
                     if dev['connected']:
                         mi.set_label(dev['name'])
-                    else:
-                        mi.set_label('{} (Last seen {})'.format(
-                            dev['name'],
-                            self.convert_time(dev['lastSeen'])))
+# NOTE: This is not working, lastSeen does not exist in config.xml
+#                    else:
+#                        mi.set_label('{} (Last seen {})'.format(
+#                            dev['name'],
+#                            self.convert_time(dev['lastSeen'])))
                     mi.set_sensitive(dev['connected'])
 
     def update_files(self):
