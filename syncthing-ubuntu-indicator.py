@@ -53,7 +53,7 @@ class Main(object):
     def __init__(self, args):
         log.info('Started main procedure')
         self.args = args
-        self.wd = os.path.normpath(os.path.abspath(os.path.split(__file__)[0]))
+        self.wd = os.path.dirname(os.path.realpath(__file__))
         self.icon_path = os.path.join(self.wd, 'icons')
         self.ind = appindicator.Indicator.new_with_path(
                             'syncthing-indicator',
