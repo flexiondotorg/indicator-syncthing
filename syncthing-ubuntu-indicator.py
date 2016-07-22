@@ -563,7 +563,6 @@ class Main(object):
             self.leave()
 
     def process_rest_stats_device(self, data):
-        log.info('process_rest_stats_device')
         for item in data:
             for dev in self.devices:
                 if dev['id'] == item:
