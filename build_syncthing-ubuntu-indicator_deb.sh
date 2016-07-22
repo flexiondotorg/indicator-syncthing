@@ -45,4 +45,3 @@ EOF
 fakeroot dpkg-deb --build $PACKAGENAME
 rm -rf $PACKAGENAME
 echo "$PACKAGENAME.deb successfully build!"
-

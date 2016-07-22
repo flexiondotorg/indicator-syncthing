@@ -563,6 +563,7 @@ class Main(object):
             self.leave()
 
     def process_rest_stats_device(self, data):
+        log.info('process_rest_stats_device')
         for item in data:
             for dev in self.devices:
                 if dev['id'] == item:
@@ -628,9 +629,11 @@ class Main(object):
                     if dev['connected']:
                         mi.set_label(dev['name'])
                     else:
-                        mi.set_label('{} (Last seen {})'.format(
-                            dev['name'],
-                            self.convert_time(dev['lastSeen'])))
+                        # NOTE: This crashes when lastSeen = 0
+                        if len(dev['lastSeen']) > 0:
+                            mi.set_label('{} (Last seen {})'.format(
+                                dev['name'],
+                                self.convert_time(dev['lastSeen'])))
                     mi.set_sensitive(dev['connected'])
 
     def update_files(self):
@@ -754,7 +757,11 @@ class Main(object):
             self.mi_shutdown_syncthing.set_sensitive(False)
 
     def count_connected(self):
-        return len([e for e in self.devices if e['connected']])
+        l = len([e for e in self.devices if e['connected']])
+        if l >= 0:
+            return l
+        else:
+            return 0
 
     def syncthing_start(self, *args):
         self.mi_start_syncthing.set_sensitive(False)
