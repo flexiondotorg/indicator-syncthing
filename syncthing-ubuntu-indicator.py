@@ -756,7 +756,7 @@ class Main(object):
             self.mi_shutdown_syncthing.set_sensitive(False)
 
     def count_connected(self):
-        l = len([e for e in self.devices if e['connected']])
+        l = len([e for e in self.devices if e['connected']]) - 1
         if l >= 0:
             return l
         else:
