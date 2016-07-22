@@ -11,9 +11,8 @@ mkdir -p $PACKAGENAME/etc/xdg/autostart
 mkdir -p $PACKAGENAME/usr/bin
 mkdir -p $PACKAGENAME/usr/share/syncthing-ubuntu-indicator
 
-wget -nc -O - "https://github.com/vincent-t/syncthing-ubuntu-indicator/archive/master.tar.gz" | tar -xvzf - -C $PACKAGENAME/usr/share/syncthing-ubuntu-indicator --strip-components=1
+wget -nc -O - "https://github.com/vincent-t/syncthing-ubuntu-indicator/archive/master.tar.gz" | tar -xvzf - -C $PACKAGENAME/usr/share/syncthing-ubuntu-indicator --strip-components=1 --exclude='testserver.py' --exclude='README.md' --exclude='build_syncthing-ubuntu-indicator_deb.sh'
 
-#Exec=python /usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py
 tee "$PACKAGENAME/etc/xdg/autostart/syncthing-ubuntu-indicator.desktop" << 'EOF'
 [Desktop Entry]
 Type=Application
@@ -44,5 +43,6 @@ Description: syncthing-ubuntu-indicator
 EOF
 
 fakeroot dpkg-deb --build $PACKAGENAME
+rm -rf $PACKAGENAME
 echo "$PACKAGENAME.deb successfully build!"
 
