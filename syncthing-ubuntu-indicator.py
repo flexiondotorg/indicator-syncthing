@@ -1,6 +1,4 @@
 #!/usr/bin/python2
-# -*- coding: utf-8 -*-
-
 import argparse
 import datetime
 import dateutil.parser
@@ -12,7 +10,6 @@ import sys
 import time
 import urlparse
 import webbrowser
-
 import pytz
 import requests   # used only to catch exceptions
 import socket     # used only to catch exceptions
@@ -194,7 +191,7 @@ class Main(object):
         self.ind.set_menu(self.menu)
 
     def load_config_begin(self):
-        ''' Read needed values from config file '''
+        # Read needed values from config file
         confdir = GLib.get_user_config_dir()
         if not confdir:
             confdir = os.path.expanduser('~/.config')
@@ -375,7 +372,7 @@ class Main(object):
                     'process_{}'.format(rest_path.strip('/').replace('/', '_'))
                     )(json_data)
 
-    # processing of the events coming from the event interface
+    # Processing of the events coming from the event interface
     def process_event(self, event):
         t = event.get('type').lower()
         if hasattr(self, 'event_{}'.format(t)):
@@ -495,9 +492,9 @@ class Main(object):
         self.recent_files.insert(0, file_details)
         self.recent_files = self.recent_files[:20]
         self.state['update_files'] = True
-    # end of the event processing dings
+    # End of event processing
 
-    # begin REST processing functions
+    # Begin REST processing functions
     def process_rest_system_connections(self, data):
         for elem in data['connections']:
             for dev in self.devices:
@@ -630,11 +627,10 @@ class Main(object):
                 if mi.get_label().split()[0] == dev['name']:
                     if dev['connected']:
                         mi.set_label(dev['name'])
-# NOTE: This is not working, lastSeen does not exist in config.xml
-#                    else:
-#                        mi.set_label('{} (Last seen {})'.format(
-#                            dev['name'],
-#                            self.convert_time(dev['lastSeen'])))
+                    else:
+                        mi.set_label('{} (Last seen {})'.format(
+                            dev['name'],
+                            self.convert_time(dev['lastSeen'])))
                     mi.set_sensitive(dev['connected'])
 
     def update_files(self):
