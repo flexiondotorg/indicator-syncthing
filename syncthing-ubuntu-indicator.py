@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 import argparse
 import datetime
 import dateutil.parser
@@ -19,11 +19,9 @@ gi.require_version('AppIndicator3', '0.1')
 
 from requests_futures.sessions import FuturesSession
 from gi.repository import Gtk, Gio, GLib
-from gi.repository import AppIndicator3 as appindicator
 from xml.dom import minidom
 
 VERSION = 'v0.3.1'
-
 
 def shorten_path(text, maxlength=80):
     if len(text) <= maxlength:
@@ -52,12 +50,14 @@ class Main(object):
         self.args = args
         self.wd = os.path.dirname(os.path.realpath(__file__))
         self.icon_path = os.path.join(self.wd, 'icons')
-        self.ind = appindicator.Indicator.new_with_path(
-                            'syncthing-indicator',
-                            'syncthing-client-idle',
-                            appindicator.IndicatorCategory.APPLICATION_STATUS,
-                            self.icon_path)
-        self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
+        if not self.args.text_only:
+            from gi.repository import AppIndicator3 as appindicator
+            self.ind = appindicator.Indicator.new_with_path(
+                                'syncthing-indicator',
+                                'syncthing-client-idle',
+                                appindicator.IndicatorCategory.APPLICATION_STATUS,
+                                self.icon_path)
+            self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
 
         self.state = {'update_folders': True,
                       'update_devices': True,
@@ -68,6 +68,7 @@ class Main(object):
         self.create_menu()
 
         self.downloading_files = []
+        self.downloading_files_extra = {} # map: file_details -> file_details_extra
         self.recent_files = []
         self.folders = []
         self.devices = []
@@ -187,8 +188,8 @@ class Main(object):
         self.quit_button.connect('activate', self.leave)
         self.quit_button.show()
         self.more_submenu.append(self.quit_button)
-
-        self.ind.set_menu(self.menu)
+        if not self.args.text_only:
+            self.ind.set_menu(self.menu)
 
     def load_config_begin(self):
         # Read needed values from config file
@@ -374,7 +375,11 @@ class Main(object):
 
     # Processing of the events coming from the event interface
     def process_event(self, event):
+        if self.args.log_events:
+            log.debug('EVENT: {}: {}'.format(event['type'], json.dumps(event)))
+
         t = event.get('type').lower()
+        #log.debug('received event: '+str(event))
         if hasattr(self, 'event_{}'.format(t)):
             log.debug('received event: {} {}'.format(
                 event.get('id'), event.get('type')))
@@ -386,6 +391,44 @@ class Main(object):
         #log.debug(json.dumps(event, indent=4))
         fn = getattr(self, 'event_{}'.format(t), self.event_unknown_event)(event)
         self.update_last_seen_id(event.get('id', 0))
+
+    def event_downloadprogress(self, event):
+        try:
+            e = event['data'].values()
+            e = e[0].keys()[0]
+        except (ValueError, KeyError, IndexError):
+            e = ""
+
+        log.debug(u'download in progress: {}'.format(e))
+        for folder_name in event['data'].keys():
+            for filename in event['data'][folder_name]:
+                file_details = json.dumps({'folder': folder_name,
+                                'file': filename,
+                                'type': 'file',
+                                'direction': 'down'})
+
+                must_be_added = False
+                try:
+                    v = self.downloading_files_extra[file_details]
+                except KeyError:
+                    v = {}
+                    must_be_added = True # not yet present in downloading_files_extra
+
+                file = event["data"][folder_name][filename]
+                if file["bytesTotal"] == 0:
+                    pct = 0.0
+                else:
+                    pct = 100 * file["bytesDone"] / file["bytesTotal"]
+                # TODO: convert bytes to kb, mb etc
+                v["progress"] = " ({}/{}) - {:.2f}%".format(file["bytesDone"], file["bytesTotal"], pct)
+                if must_be_added:
+                    self.downloading_files_extra[file_details] = v
+
+            for elm in self.folders:
+                if elm['id'] == folder_name:
+                        elm['state'] = 'syncing'
+                        #TODO: this is slow!
+        self.state['update_files'] = True
 
     def event_unknown_event(self, event):
         pass
@@ -466,6 +509,11 @@ class Main(object):
                         'file': event['data']['item'],
                         'type': event['data']['type'],
                         'direction': 'down'}
+        try:
+            del self.downloading_files_extra[json.dumps(file_details)]
+        except KeyError:
+            pass
+
         if file_details not in self.downloading_files:
             self.downloading_files.append(file_details)
         for elm in self.folders:
@@ -482,15 +530,24 @@ class Main(object):
                         'type': event['data']['type'],
                         'direction': 'down'}
         try:
+            del self.downloading_files_extra[json.dumps(file_details)]
+        except KeyError:
+            pass
+        try:
             self.downloading_files.remove(file_details)
-            log.debug('file locally updated: %s' % file_details['file'])
+            #action: update, delete, or metadata.
+            #versioning:
+            #For the first hour, the most recent version is kept every 30 seconds.
+            #For the first day, the most recent version is kept every hour.
+            #For the first 30 days, the most recent version is kept every day.
+            log.debug('file locally updated: %s (%s) at %s' % (file_details['file'], event['data']['action'], event['time']))
         except ValueError:
             log.debug('Completed a file we didn\'t know about: {}'.format(
                 event['data']['item']))
         file_details['time'] = event['time']
         file_details['action'] = event['data']['action']
         self.recent_files.insert(0, file_details)
-        self.recent_files = self.recent_files[:20]
+        self.recent_files = self.recent_files[:self.args.nb_recent_files]
         self.state['update_files'] = True
     # End of event processing
 
@@ -649,9 +706,14 @@ class Main(object):
             for child in self.current_files_submenu.get_children():
                 self.current_files_submenu.remove(child)
             for f in self.downloading_files:
-                mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(
+                fj = json.dumps(f)
+                #mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(
+                #    f['folder'],
+                #    shorten_path(f['file'])))
+                mi = Gtk.MenuItem(u'\u2193 [{}] {}{}'.format(
                     f['folder'],
-                    shorten_path(f['file'])))
+                    shorten_path(f['file']),
+                    self.downloading_files_extra[fj]["progress"] if fj in self.downloading_files_extra and "progress" in self.downloading_files_extra[fj] else ""))
                 self.current_files_submenu.append(mi)
                 mi.connect(
                     'activate',
@@ -770,7 +832,8 @@ class Main(object):
         self.title_menu.set_label('Starting Syncthing...')
         self.syncthing_version = None
 
-        cmd = [os.path.join(self.wd, 'start-syncthing.sh')]
+        #cmd = [os.path.join(self.wd, 'start-syncthing.sh')]
+        cmd = "syncthing -no-browser -no-restart -logflags=0"
         log.info('Starting {}'.format(cmd))
         try:
             proc = subprocess.Popen(cmd)
@@ -817,7 +880,7 @@ class Main(object):
     def show_about(self, widget):
         dialog = Gtk.AboutDialog()
         dialog.set_default_icon_from_file(
-            os.path.join(self.icon_path, 'syncthing-client-idle.svg'))
+            os.path.join(self.icon_path, 'icon.png'))
         dialog.set_logo(None)
         dialog.set_program_name('Syncthing Ubuntu Indicator')
         dialog.set_version(VERSION)
@@ -864,9 +927,10 @@ class Main(object):
         'cleaning': {'name': 'syncthing-client-scanning', 'descr': 'Cleaning Directories'},
         }
 
-        self.ind.set_attention_icon(icon[self.state['set_icon']]['name'])
-        self.ind.set_icon_full(icon[self.state['set_icon']]['name'],
-                               icon[self.state['set_icon']]['descr'])
+        if not self.args.text_only:
+            self.ind.set_attention_icon(icon[self.state['set_icon']]['name'])
+            self.ind.set_icon_full(icon[self.state['set_icon']]['name'],
+                                   icon[self.state['set_icon']]['descr'])
 
     def leave(self, *args):
         Gtk.main_quit()
@@ -916,6 +980,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel',
         choices=['debug', 'info', 'warning', 'error'], default='info')
+    parser.add_argument('--log-events', action='store_true', help='Log every event')
     parser.add_argument('--timeout-event', type=int, default=10, metavar='N',
         help='Interval for polling event interface, in seconds. Default: %(default)s')
     parser.add_argument('--timeout-rest', type=int, default=30, metavar='N',
@@ -928,6 +993,10 @@ if __name__ == '__main__':
         metavar='FORMAT',
         help='Format to display date and time. See `man strftime` for help. '
             "Default: '%(default)s'")
+    parser.add_argument('--text-only', action='store_true',
+        help='Text only, no icon')
+    parser.add_argument('--nb-recent-files', type=int, default=20, metavar='N',
+        help='Number of recent files entries to keep. Default: %(default)s')
 
     args = parser.parse_args()
     for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
