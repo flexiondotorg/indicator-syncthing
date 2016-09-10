@@ -25,7 +25,7 @@ EOF
 #Create run script
 tee "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator" << EOF
 #!/bin/bash
-/usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py "\$1"
+python /usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py "\$1"
 EOF
 chmod 755 "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator"
 

@@ -1015,7 +1015,8 @@ if __name__ == '__main__':
     parser.add_argument('--nb-recent-files', type=int, default=20, metavar='N',
         help='Number of recent files entries to keep. Default: %(default)s')
 
-    args = parser.parse_args()
+    #args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
     for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
         if arg < 1:
             sys.exit('Timeouts must be integers greater than 0')
