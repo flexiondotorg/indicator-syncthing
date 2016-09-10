@@ -9,7 +9,7 @@ echo "Build $PACKAGENAME.deb"
 
 mkdir -p "$PACKAGENAME/usr/bin" "$PACKAGENAME/etc/xdg/autostart" "$PACKAGENAME/usr/bin" "$PACKAGENAME/usr/share/syncthing-ubuntu-indicator"
 
-wget -nc -O - "https://github.com/vincent-t/syncthing-ubuntu-indicator/archive/master.tar.gz" | tar -xvzf - -C $PACKAGENAME/usr/share/syncthing-ubuntu-indicator --strip-components=1 --exclude='README.md' --exclude='build_syncthing-ubuntu-indicator_deb.sh' --exclude="*.svg"
+wget -nc -O - "https://github.com/vincent-t/syncthing-ubuntu-indicator/archive/master.tar.gz" | tar -xvzf - -C $PACKAGENAME/usr/share/syncthing-ubuntu-indicator --strip-components=1 --exclude='README.md' --exclude='make_deb.sh' --exclude="*.gitignore" --exclude="*.svg"
 
 tee "$PACKAGENAME/etc/xdg/autostart/syncthing-ubuntu-indicator.desktop" << 'EOF'
 [Desktop Entry]
