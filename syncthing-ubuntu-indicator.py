@@ -251,6 +251,7 @@ class Main(object):
                 elif elem.tagName == 'folder':
                     self.folders.append({
                         'id': elem.getAttribute('id'),
+                        'label': elem.getAttribute('label'),
                         'path': elem.getAttribute('path'),
                         'state': 'unknown',
                         })
@@ -567,6 +568,7 @@ class Main(object):
         for elem in data['folders']:
             newfolders.append({
                 'id': elem['id'],
+                'label': elem['label'],
                 'path': elem['path'],
                 'state': 'unknown',
                 })
@@ -690,6 +692,9 @@ class Main(object):
                             mi.set_label('{} (Last seen {})'.format(
                                 dev['name'],
                                 self.convert_time(dev['lastSeen'])))
+                        else:
+                            mi.set_label('{} (Last seen Unknown)'.format(dev['name']))
+
                     mi.set_sensitive(dev['connected'])
 
     def update_files(self):
@@ -762,9 +767,12 @@ class Main(object):
                 for mi in self.folder_menu_submenu:
                     for elm in self.folders:
                         folder_maxlength = max(folder_maxlength, len(elm['id']))
+                        if folder_maxlength < max(folder_maxlength, len(elm['label'])):
+                            folder_maxlength = max(folder_maxlength, len(elm['label']))
                         if str(mi.get_label()).split(' ', 1)[0] == elm['id']:
                             if elm['state'] == 'scanning':
-                                mi.set_label('{} (scanning)'.format(elm['id']))
+                                #mi.set_label('{} (scanning)'.format(elm['id']))
+                                mi.set_label('{} (scanning)'.format(elm['id'] or elm['label']))
                             elif elm['state'] == 'syncing':
                                 if elm.get('needFiles') > 1:
                                     lbltext = '{fid} (syncing {num} files, {bytes})'
@@ -773,16 +781,21 @@ class Main(object):
                                 else:
                                     lbltext = '{fid} (syncing)'
                                 mi.set_label(lbltext.format(
-                                    fid=elm['id'], num=elm.get('needFiles'),
+                                    #fid=elm['id'], num=elm.get('needFiles'),
+                                    fid=elm['id'] or elm['label'], num=elm.get('needFiles'),
                                     bytes=human_readable(elm.get('needBytes', 0))))
                             else:
-                                mi.set_label(elm['id'].ljust(folder_maxlength + 20))
+                                #mi.set_label(elm['id'].ljust(folder_maxlength + 20))
+                                mi.set_label(elm['id'] or elm['label'].ljust(folder_maxlength + 20))
             else:
                 for child in self.folder_menu_submenu.get_children():
                     self.folder_menu_submenu.remove(child)
                 for elm in self.folders:
                     folder_maxlength = max(folder_maxlength, len(elm['id']))
-                    mi = Gtk.MenuItem(elm['id'].ljust(folder_maxlength + 20))
+                    if folder_maxlength < max(folder_maxlength, len(elm['label'])):
+                        folder_maxlength = max(folder_maxlength, len(elm['label']))
+                    #mi = Gtk.MenuItem(elm['id'].ljust(folder_maxlength + 20))
+                    mi = Gtk.MenuItem((elm['label'] or elm['id']).ljust(folder_maxlength + 20))
                     mi.connect('activate', self.open_file_browser, elm['path'])
                     self.folder_menu_submenu.append(mi)
                     mi.show()
@@ -818,6 +831,7 @@ class Main(object):
             self.mi_shutdown_syncthing.set_sensitive(False)
 
     def count_connected(self):
+        # Prevent counting local running syncthing instance
         l = len([e for e in self.devices if e['connected']]) - 1
         if l >= 0:
             return l
@@ -833,12 +847,15 @@ class Main(object):
         self.syncthing_version = None
 
         #cmd = [os.path.join(self.wd, 'start-syncthing.sh')]
-        cmd = "syncthing -no-browser -no-restart -logflags=0"
-        log.info('Starting {}'.format(cmd))
+        #cmd = "syncthing -no-browser -no-restart -logflags=0"
+        #log.info('Starting {}'.format(cmd))
         try:
-            proc = subprocess.Popen(cmd)
+            #proc = subprocess.Popen(cmd)
+            log.info('Starting syncthing')
+            proc = subprocess.Popen("syncthing", "-no-browser", "-no-restart", "-logflags=0")
         except Exception as e:
-            log.error("Couldn't run {}: {}".format(cmd, e))
+            #log.error("Couldn't run {}: {}".format(cmd, e))
+            log.error("Couldn't run syncthing: {}".format(e))
             return
         self.state['update_st_running'] = True
 
