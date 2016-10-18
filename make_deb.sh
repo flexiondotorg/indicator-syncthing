@@ -38,7 +38,7 @@ Version: $VERSION
 Architecture: all
 Maintainer: $MAINTAINER <$EMAIL>
 Installed-Size: $PACKAGESIZE
-Depends: python-gobject, python-pip, python-tz
+Depends: python-dateutil, python-gobject, python-requests, python-requests-futures, python-tz
 Section: python
 Priority: optional
 Homepage: https://github.com/vincent-t/syncthing-ubuntu-indicator
