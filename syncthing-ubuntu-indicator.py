@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+from __future__ import unicode_literals
 import argparse
 import datetime
 import dateutil.parser
@@ -42,7 +43,6 @@ def human_readable(num):
             return '{} {}'.format(f, unit)
         num = num / 1024.0
     return '{:.1f} {}'.format(num, 'YiB')
-
 
 class Main(object):
     def __init__(self, args):
@@ -985,10 +985,10 @@ class Main(object):
 
     def get_full_path(self, folder, item):
         for elem in self.folders:
+            a = ''
             if elem['id'] == folder:
                 a = elem['path']
         return os.path.join(a, item)
-
 
 if __name__ == '__main__':
     import signal
