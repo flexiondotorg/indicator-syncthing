@@ -24,6 +24,7 @@ from xml.dom import minidom
 
 VERSION = 'v0.3.1'
 
+
 def shorten_path(text, maxlength=80):
     if len(text) <= maxlength:
         return text
@@ -36,6 +37,7 @@ def shorten_path(text, maxlength=80):
             return '.../' + tail
     return head + '/.../' + tail
 
+
 def human_readable(num):
     for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB']:
         if abs(num) < 1024.0:
@@ -44,7 +46,9 @@ def human_readable(num):
         num = num / 1024.0
     return '{:.1f} {}'.format(num, 'YiB')
 
+
 class Main(object):
+
     def __init__(self, args):
         log.info('Started main procedure')
         self.args = args
@@ -53,10 +57,10 @@ class Main(object):
         if not self.args.text_only:
             from gi.repository import AppIndicator3 as appindicator
             self.ind = appindicator.Indicator.new_with_path(
-                                'syncthing-indicator',
-                                'syncthing-client-idle',
-                                appindicator.IndicatorCategory.APPLICATION_STATUS,
-                                self.icon_path)
+                'syncthing-indicator',
+                'syncthing-client-idle',
+                appindicator.IndicatorCategory.APPLICATION_STATUS,
+                self.icon_path)
             self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
 
         self.state = {'update_folders': True,
@@ -68,7 +72,7 @@ class Main(object):
         self.create_menu()
 
         self.downloading_files = []
-        self.downloading_files_extra = {} # map: file_details -> file_details_extra
+        self.downloading_files_extra = {}  # map: file_details -> file_details_extra
         self.recent_files = []
         self.folders = []
         self.devices = []
@@ -96,7 +100,8 @@ class Main(object):
         self.menu.append(self.title_menu)
 
         self.syncthing_upgrade_menu = Gtk.MenuItem('Upgrade check')
-        self.syncthing_upgrade_menu.connect('activate', self.open_releases_page)
+        self.syncthing_upgrade_menu.connect(
+            'activate', self.open_releases_page)
         self.menu.append(self.syncthing_upgrade_menu)
 
         self.mi_errors = Gtk.MenuItem('Errors: open web interface')
@@ -233,7 +238,8 @@ class Main(object):
             if not api_key:
                 raise Exception('No apikey element in config')
             if not api_key[0].hasChildNodes():
-                raise Exception('No apikey specified in config, please create one via the web interface')
+                raise Exception(
+                    'No apikey specified in config, please create one via the web interface')
             self.api_key = api_key[0].firstChild.nodeValue
 
             # Read folders and devices from config
@@ -247,14 +253,14 @@ class Main(object):
                         'state': '',
                         'connected': False,
                         'lastSeen': '',
-                        })
+                    })
                 elif elem.tagName == 'folder':
                     self.folders.append({
                         'id': elem.getAttribute('id'),
                         'label': elem.getAttribute('label'),
                         'path': elem.getAttribute('path'),
                         'state': 'unknown',
-                        })
+                    })
             if not self.devices:
                 raise Exception('No devices in config')
             if not self.folders:
@@ -314,7 +320,8 @@ class Main(object):
                 "Couldn't connect to Syncthing at {}".format(
                     self.syncthing_base))
             self.count_connection_error += 1
-            log.info('count_connection_error: {}'.format(self.count_connection_error))
+            log.info('count_connection_error: {}'.format(
+                self.count_connection_error))
             if self.current_action[0] == 'syncthing_shutdown':
                 self.current_action = (None, None)
             if self.count_connection_error > 1:
@@ -370,9 +377,9 @@ class Main(object):
                 self.set_state('error')
         else:
             fn = getattr(
-                    self,
-                    'process_{}'.format(rest_path.strip('/').replace('/', '_'))
-                    )(json_data)
+                self,
+                'process_{}'.format(rest_path.strip('/').replace('/', '_'))
+            )(json_data)
 
     # Processing of the events coming from the event interface
     def process_event(self, event):
@@ -390,7 +397,8 @@ class Main(object):
                 event.get('id'), event.get('type')))
 
         #log.debug(json.dumps(event, indent=4))
-        fn = getattr(self, 'event_{}'.format(t), self.event_unknown_event)(event)
+        fn = getattr(self, 'event_{}'.format(
+            t), self.event_unknown_event)(event)
         self.update_last_seen_id(event.get('id', 0))
 
     def event_downloadprogress(self, event):
@@ -404,16 +412,16 @@ class Main(object):
         for folder_name in event['data'].keys():
             for filename in event['data'][folder_name]:
                 file_details = json.dumps({'folder': folder_name,
-                                'file': filename,
-                                'type': 'file',
-                                'direction': 'down'})
+                                           'file': filename,
+                                           'type': 'file',
+                                           'direction': 'down'})
 
                 must_be_added = False
                 try:
                     v = self.downloading_files_extra[file_details]
                 except KeyError:
                     v = {}
-                    must_be_added = True # not yet present in downloading_files_extra
+                    must_be_added = True  # not yet present in downloading_files_extra
 
                 file = event["data"][folder_name][filename]
                 if file["bytesTotal"] == 0:
@@ -421,14 +429,15 @@ class Main(object):
                 else:
                     pct = 100 * file["bytesDone"] / file["bytesTotal"]
                 # TODO: convert bytes to kb, mb etc
-                v["progress"] = " ({}/{}) - {:.2f}%".format(file["bytesDone"], file["bytesTotal"], pct)
+                v["progress"] = " ({}/{}) - {:.2f}%".format(
+                    file["bytesDone"], file["bytesTotal"], pct)
                 if must_be_added:
                     self.downloading_files_extra[file_details] = v
 
             for elm in self.folders:
                 if elm['id'] == folder_name:
-                        elm['state'] = 'syncing'
-                        #TODO: this is slow!
+                    elm['state'] = 'syncing'
+                    # TODO: this is slow!
         self.state['update_files'] = True
 
     def event_unknown_event(self, event):
@@ -466,7 +475,7 @@ class Main(object):
     def event_startupcomplete(self, event):
         self.set_state('idle')
         log.info('Syncthing startup complete at %s' %
-            self.convert_time(event['time']))
+                 self.convert_time(event['time']))
         if event['data'] != None:
             self.system_status['myID'] = event['data'].get('myID')
         log.info('myID: %s' % self.system_status.get('myID'))
@@ -487,7 +496,7 @@ class Main(object):
                 'name': 'new unknown device',
                 'address': event['data']['addrs'],
                 'state': 'unknown',
-                })
+            })
         self.state['update_devices'] = True
 
     def event_deviceconnected(self, event):
@@ -536,12 +545,13 @@ class Main(object):
             pass
         try:
             self.downloading_files.remove(file_details)
-            #action: update, delete, or metadata.
-            #versioning:
-            #For the first hour, the most recent version is kept every 30 seconds.
-            #For the first day, the most recent version is kept every hour.
-            #For the first 30 days, the most recent version is kept every day.
-            log.debug('file locally updated: %s (%s) at %s' % (file_details['file'], event['data']['action'], event['time']))
+            # action: update, delete, or metadata.
+            # versioning:
+            # For the first hour, the most recent version is kept every 30 seconds.
+            # For the first day, the most recent version is kept every hour.
+            # For the first 30 days, the most recent version is kept every day.
+            log.debug('file locally updated: %s (%s) at %s' % (
+                file_details['file'], event['data']['action'], event['time']))
         except ValueError:
             log.debug('Completed a file we didn\'t know about: {}'.format(
                 event['data']['item']))
@@ -571,7 +581,7 @@ class Main(object):
                 'label': elem['label'],
                 'path': elem['path'],
                 'state': 'unknown',
-                })
+            })
 
         newdevices = []
         for elem in data['devices']:
@@ -581,7 +591,7 @@ class Main(object):
                 'state': '',
                 'connected': False,
                 'lastSeen': '',
-                })
+            })
 
         self.folders = newfolders
         self.devices = newdevices
@@ -693,7 +703,8 @@ class Main(object):
                                 dev['name'],
                                 self.convert_time(dev['lastSeen'])))
                         else:
-                            mi.set_label('{} (Last seen Unknown)'.format(dev['name']))
+                            mi.set_label(
+                                '{} (Last seen Unknown)'.format(dev['name']))
 
                     mi.set_sensitive(dev['connected'])
 
@@ -703,7 +714,7 @@ class Main(object):
 
         if not self.downloading_files:
             self.current_files_menu.set_sensitive(False)
-            #self.set_state('idle')
+            # self.set_state('idle')
         else:
             # Repopulate the current files menu
             self.current_files_menu.set_sensitive(True)
@@ -712,7 +723,7 @@ class Main(object):
                 self.current_files_submenu.remove(child)
             for f in self.downloading_files:
                 fj = json.dumps(f)
-                #mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(
+                # mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(
                 #    f['folder'],
                 #    shorten_path(f['file'])))
                 mi = Gtk.MenuItem(u'\u2193 [{}] {}{}'.format(
@@ -747,8 +758,8 @@ class Main(object):
                         folder=f['folder'],
                         item=shorten_path(f['file']),
                         time=self.convert_time(f['time'])
-                        )
                     )
+                )
                 self.recent_files_submenu.append(mi)
                 mi.connect(
                     'activate',
@@ -766,13 +777,16 @@ class Main(object):
             if len(self.folders) == len(self.folder_menu_submenu):
                 for mi in self.folder_menu_submenu:
                     for elm in self.folders:
-                        folder_maxlength = max(folder_maxlength, len(elm['id']))
+                        folder_maxlength = max(
+                            folder_maxlength, len(elm['id']))
                         if folder_maxlength < max(folder_maxlength, len(elm['label'])):
-                            folder_maxlength = max(folder_maxlength, len(elm['label']))
+                            folder_maxlength = max(
+                                folder_maxlength, len(elm['label']))
                         if str(mi.get_label()).split(' ', 1)[0] == elm['id']:
                             if elm['state'] == 'scanning':
                                 #mi.set_label('{} (scanning)'.format(elm['id']))
-                                mi.set_label('{} (scanning)'.format(elm['id'] or elm['label']))
+                                mi.set_label('{} (scanning)'.format(
+                                    elm['id'] or elm['label']))
                             elif elm['state'] == 'syncing':
                                 if elm.get('needFiles') > 1:
                                     lbltext = '{fid} (syncing {num} files, {bytes})'
@@ -786,16 +800,19 @@ class Main(object):
                                     bytes=human_readable(elm.get('needBytes', 0))))
                             else:
                                 #mi.set_label(elm['id'].ljust(folder_maxlength + 20))
-                                mi.set_label(elm['id'] or elm['label'].ljust(folder_maxlength + 20))
+                                mi.set_label(elm['id'] or elm['label'].ljust(
+                                    folder_maxlength + 20))
             else:
                 for child in self.folder_menu_submenu.get_children():
                     self.folder_menu_submenu.remove(child)
                 for elm in self.folders:
                     folder_maxlength = max(folder_maxlength, len(elm['id']))
                     if folder_maxlength < max(folder_maxlength, len(elm['label'])):
-                        folder_maxlength = max(folder_maxlength, len(elm['label']))
+                        folder_maxlength = max(
+                            folder_maxlength, len(elm['label']))
                     #mi = Gtk.MenuItem(elm['id'].ljust(folder_maxlength + 20))
-                    mi = Gtk.MenuItem((elm['label'] or elm['id']).ljust(folder_maxlength + 20))
+                    mi = Gtk.MenuItem(
+                        (elm['label'] or elm['id']).ljust(folder_maxlength + 20))
                     mi.connect('activate', self.open_file_browser, elm['path'])
                     self.folder_menu_submenu.append(mi)
                     mi.show()
@@ -852,7 +869,8 @@ class Main(object):
         try:
             #proc = subprocess.Popen(cmd)
             log.info('Starting syncthing')
-            proc = subprocess.Popen("syncthing", "-no-browser", "-no-restart", "-logflags=0")
+            proc = subprocess.Popen(
+                "syncthing", "-no-browser", "-no-restart", "-logflags=0")
         except Exception as e:
             #log.error("Couldn't run {}: {}".format(cmd, e))
             log.error("Couldn't run syncthing: {}".format(e))
@@ -901,9 +919,10 @@ class Main(object):
         dialog.set_logo(None)
         dialog.set_program_name('Syncthing Ubuntu Indicator')
         dialog.set_version(VERSION)
-        dialog.set_website('https://github.com/icaruseffect/syncthing-ubuntu-indicator')
+        dialog.set_website(
+            'https://github.com/icaruseffect/syncthing-ubuntu-indicator')
         dialog.set_comments('This menu applet for systems supporting AppIndicator'
-            '\ncan show the status of a Syncthing instance')
+                            '\ncan show the status of a Syncthing instance')
         dialog.set_license(self.license())
         dialog.run()
         dialog.destroy()
@@ -935,13 +954,13 @@ class Main(object):
 
     def set_icon(self):
         icon = {
-        'updating': {'name': 'syncthing-client-updating', 'descr': 'Updating'},
-        'idle': {'name': 'syncthing-client-idle', 'descr': 'Nothing to do'},
-        'syncing': {'name': 'syncthing-client-updown', 'descr': 'Transferring Data'},
-        'error': {'name': 'syncthing-client-error', 'descr': 'Scotty, We Have A Problem!'},
-        'paused': {'name': 'syncthing-client-paused', 'descr': 'Paused'},
-        'scanning': {'name': 'syncthing-client-scanning', 'descr': 'Scanning Directories'},
-        'cleaning': {'name': 'syncthing-client-scanning', 'descr': 'Cleaning Directories'},
+            'updating': {'name': 'syncthing-client-updating', 'descr': 'Updating'},
+            'idle': {'name': 'syncthing-client-idle', 'descr': 'Nothing to do'},
+            'syncing': {'name': 'syncthing-client-updown', 'descr': 'Transferring Data'},
+            'error': {'name': 'syncthing-client-error', 'descr': 'Scotty, We Have A Problem!'},
+            'paused': {'name': 'syncthing-client-paused', 'descr': 'Paused'},
+            'scanning': {'name': 'syncthing-client-scanning', 'descr': 'Scanning Directories'},
+            'cleaning': {'name': 'syncthing-client-scanning', 'descr': 'Cleaning Directories'},
         }
 
         if not self.args.text_only:
@@ -996,24 +1015,25 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel',
-        choices=['debug', 'info', 'warning', 'error'], default='info')
-    parser.add_argument('--log-events', action='store_true', help='Log every event')
+                        choices=['debug', 'info', 'warning', 'error'], default='info')
+    parser.add_argument('--log-events', action='store_true',
+                        help='Log every event')
     parser.add_argument('--timeout-event', type=int, default=10, metavar='N',
-        help='Interval for polling event interface, in seconds. Default: %(default)s')
+                        help='Interval for polling event interface, in seconds. Default: %(default)s')
     parser.add_argument('--timeout-rest', type=int, default=30, metavar='N',
-        help='Interval for polling REST interface, in seconds. Default: %(default)s')
+                        help='Interval for polling REST interface, in seconds. Default: %(default)s')
     parser.add_argument('--timeout-gui', type=int, default=5, metavar='N',
-        help='Interval for refreshing GUI, in seconds. Default: %(default)s')
+                        help='Interval for refreshing GUI, in seconds. Default: %(default)s')
     parser.add_argument('--no-shutdown', action='store_true',
-        help='Hide Start, Restart, and Shutdown Syncthing menus')
+                        help='Hide Start, Restart, and Shutdown Syncthing menus')
     parser.add_argument('--timeformat', type=str, default='%x %X',
-        metavar='FORMAT',
-        help='Format to display date and time. See `man strftime` for help. '
-            "Default: '%(default)s'")
+                        metavar='FORMAT',
+                        help='Format to display date and time. See `man strftime` for help. '
+                        "Default: '%(default)s'")
     parser.add_argument('--text-only', action='store_true',
-        help='Text only, no icon')
+                        help='Text only, no icon')
     parser.add_argument('--nb-recent-files', type=int, default=20, metavar='N',
-        help='Number of recent files entries to keep. Default: %(default)s')
+                        help='Number of recent files entries to keep. Default: %(default)s')
 
     #args = parser.parse_args()
     args, unknown = parser.parse_known_args()
