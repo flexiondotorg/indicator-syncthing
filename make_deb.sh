@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGENAME=syncthing-ubuntu-indicator
-VERSION=0.3.1
+VERSION=1.0.0
 MAINTAINER=
 EMAIL=
 
@@ -17,7 +17,7 @@ Version=1.0
 Type=Application
 Name=syncthing-ubuntu-indicator
 Comment=AppIndicator for Syncthing
-Exec=syncthing-ubuntu-indicator
+Exec=syncthing-ubuntu-indicator --loglevel warning
 StartupNotify=false
 X-GNOME-Autostart-enabled=true
 EOF
@@ -25,7 +25,7 @@ EOF
 #Create run script
 tee "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator" << EOF
 #!/bin/bash
-python /usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py "\$1"
+/usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py "\$1"
 EOF
 chmod 755 "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator"
 
@@ -38,7 +38,7 @@ Version: $VERSION
 Architecture: all
 Maintainer: $MAINTAINER <$EMAIL>
 Installed-Size: $PACKAGESIZE
-Depends: python-dateutil, python-gobject, python-requests, python-requests-futures, python-tz
+Depends: python3-dateutil, python3-gi, python3-requests, python3-requests-futures, python3-tz
 Section: python
 Priority: optional
 Homepage: https://github.com/vincent-t/syncthing-ubuntu-indicator

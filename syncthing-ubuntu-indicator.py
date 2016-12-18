@@ -1,5 +1,5 @@
-#!/usr/bin/env python2
-from __future__ import unicode_literals
+#!/usr/bin/env python3
+
 import argparse
 import datetime
 import dateutil.parser
@@ -9,10 +9,11 @@ import os
 import subprocess
 import sys
 import time
-import urlparse
+import urllib.parse
 import webbrowser
 import pytz
 import requests   # used only to catch exceptions
+import signal
 import socket     # used only to catch exceptions
 import gi
 gi.require_version('Gtk', '3.0')
@@ -22,7 +23,7 @@ from requests_futures.sessions import FuturesSession
 from gi.repository import Gtk, Gio, GLib
 from xml.dom import minidom
 
-VERSION = 'v0.3.1'
+VERSION = 'v1.0.0'
 
 
 def shorten_path(text, maxlength=80):
@@ -282,7 +283,7 @@ class Main(object):
 
     def syncthing_url(self, url):
         ''' Creates a url from given values and the address read from file '''
-        return urlparse.urljoin(self.syncthing_base, url)
+        return urllib.parse.urljoin(self.syncthing_base, url)
 
     def open_web_ui(self, *args):
         webbrowser.open(self.syncthing_url(''))
@@ -337,8 +338,8 @@ class Main(object):
             log.error('exception: {}'.format(e))
             return
 
-        rest_path = urlparse.urlparse(r.url).path
-        rest_query = urlparse.urlparse(r.url).query
+        rest_path = urllib.parse.urlparse(r.url).path
+        rest_query = urllib.parse.urlparse(r.url).query
         if r.status_code != 200:
             log.warning('rest_receive_data: {0} failed ({1})'.format(
                 rest_path, r.status_code))
@@ -403,13 +404,13 @@ class Main(object):
 
     def event_downloadprogress(self, event):
         try:
-            e = event['data'].values()
-            e = e[0].keys()[0]
+            e = list(event['data'].values())
+            e = list(e[0].keys())[0]
         except (ValueError, KeyError, IndexError):
             e = ""
 
-        log.debug(u'download in progress: {}'.format(e))
-        for folder_name in event['data'].keys():
+        log.debug('download in progress: {}'.format(e))
+        for folder_name in list(event['data'].keys()):
             for filename in event['data'][folder_name]:
                 file_details = json.dumps({'folder': folder_name,
                                            'file': filename,
@@ -514,7 +515,7 @@ class Main(object):
         self.state['update_devices'] = True
 
     def event_itemstarted(self, event):
-        log.debug(u'item started: {}'.format(event['data']['item']))
+        log.debug('item started: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
                         'type': event['data']['type'],
@@ -534,7 +535,7 @@ class Main(object):
 
     def event_itemfinished(self, event):
         # TODO: test whether 'error' is null
-        log.debug(u'item finished: {}'.format(event['data']['item']))
+        log.debug('item finished: {}'.format(event['data']['item']))
         file_details = {'folder': event['data']['folder'],
                         'file': event['data']['item'],
                         'type': event['data']['type'],
@@ -709,7 +710,7 @@ class Main(object):
                     mi.set_sensitive(dev['connected'])
 
     def update_files(self):
-        self.current_files_menu.set_label(u'Downloading %s files' % (
+        self.current_files_menu.set_label('Downloading %s files' % (
             len(self.downloading_files)))
 
         if not self.downloading_files:
@@ -726,7 +727,7 @@ class Main(object):
                 # mi = Gtk.MenuItem(u'\u2193 [{}] {}'.format(
                 #    f['folder'],
                 #    shorten_path(f['file'])))
-                mi = Gtk.MenuItem(u'\u2193 [{}] {}{}'.format(
+                mi = Gtk.MenuItem('\u2193 [{}] {}{}'.format(
                     f['folder'],
                     shorten_path(f['file']),
                     self.downloading_files_extra[fj]["progress"] if fj in self.downloading_files_extra and "progress" in self.downloading_files_extra[fj] else ""))
@@ -746,14 +747,14 @@ class Main(object):
             self.recent_files_menu.set_sensitive(True)
             for child in self.recent_files_submenu.get_children():
                 self.recent_files_submenu.remove(child)
-            icons = {'delete': u'\u2612',    # [x]
-                     'update': u'\u2193',    # down arrow
-                     'dir': u'\U0001f4c1',   # folder
-                     'file': u'\U0001f4c4',  # file
+            icons = {'delete': '\u2612',    # [x]
+                     'update': '\u2193',    # down arrow
+                     'dir': '\U0001f4c1',   # folder
+                     'file': '\U0001f4c4',  # file
                      }
             for f in self.recent_files:
                 mi = Gtk.MenuItem(
-                    u'{icon} {time} [{folder}] {item}'.format(
+                    '{icon} {time} [{folder}] {item}'.format(
                         icon=icons.get(f['action'], 'unknown'),
                         folder=f['folder'],
                         item=shorten_path(f['file']),
@@ -825,10 +826,10 @@ class Main(object):
             pass
         elif self.count_connection_error <= 1:
             if self.syncthing_version and self.device_name:
-                self.title_menu.set_label(u'Syncthing {0}  \u2022  {1}'.format(
+                self.title_menu.set_label('Syncthing {0}  \u2022  {1}'.format(
                     self.syncthing_version, self.device_name))
             else:
-                self.title_menu.set_label(u'Syncthing')
+                self.title_menu.set_label('Syncthing')
             self.mi_start_syncthing.set_sensitive(False)
             self.mi_restart_syncthing.set_sensitive(True)
             self.mi_shutdown_syncthing.set_sensitive(True)
@@ -1010,12 +1011,12 @@ class Main(object):
         return os.path.join(a, item)
 
 if __name__ == '__main__':
-    import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--loglevel',
-                        choices=['debug', 'info', 'warning', 'error'], default='info')
+                        choices=['debug', 'info', 'warning', 'error'], default='info',
+                        help='Filter logging by level. Default: %(default)s')
     parser.add_argument('--log-events', action='store_true',
                         help='Log every event')
     parser.add_argument('--timeout-event', type=int, default=10, metavar='N',
@@ -1035,7 +1036,6 @@ if __name__ == '__main__':
     parser.add_argument('--nb-recent-files', type=int, default=20, metavar='N',
                         help='Number of recent files entries to keep. Default: %(default)s')
 
-    #args = parser.parse_args()
     args, unknown = parser.parse_known_args()
     for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
         if arg < 1:
