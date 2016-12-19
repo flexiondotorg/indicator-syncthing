@@ -22,16 +22,12 @@ StartupNotify=false
 X-GNOME-Autostart-enabled=true
 EOF
 
-#Create run script
-tee "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator" << EOF
-#!/bin/bash
-./usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py "\$1"
-EOF
-chmod 755 "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator"
+#Create softlink
+ln -s "/usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py" "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator"
 
-PACKAGESIZE=`du -c $PACKAGENAME | egrep -i 'total|insgesamt' | cut -f1`
+PACKAGESIZE=$(du -c $PACKAGENAME | egrep -i 'total|insgesamt' | cut -f1)
 
-mkdir $PACKAGENAME/DEBIAN
+mkdir "$PACKAGENAME/DEBIAN"
 tee "$PACKAGENAME/DEBIAN/control" << EOF
 Package: $PACKAGENAME
 Version: $VERSION
@@ -48,6 +44,6 @@ EOF
 
 chmod 0644 "$PACKAGENAME/DEBIAN/control"
 
-fakeroot dpkg-deb --build $PACKAGENAME
-rm -rf $PACKAGENAME
+fakeroot dpkg-deb --build "$PACKAGENAME"
+rm -rf "$PACKAGENAME"
 echo "$PACKAGENAME.deb successfully build!"
