@@ -38,7 +38,7 @@ Depends: python3-dateutil, python3-gi, python3-requests, python3-requests-future
 Section: python
 Priority: optional
 Homepage: https://github.com/vincent-t/indicator-syncthing
-Description: syncthing-ubuntu-indicator
+Description: $PACKAGENAME
  Provides an AppIndicator for Syncthing
 EOF
 
