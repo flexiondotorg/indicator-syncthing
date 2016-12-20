@@ -22,8 +22,8 @@ _On Ubuntu:_
 installation
 ==========================
 
-    git clone https://github.com/vincent-t/syncthing-ubuntu-indicator.git
-    cd syncthing-ubuntu-indicator
+    git clone https://github.com/vincent-t/indicator-syncthing.git
+    cd indicator-syncthing
     python3 ./indicator-syncthing.py
 
 [Syncthing]: https://github.com/syncthing/syncthing

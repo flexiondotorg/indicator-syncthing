@@ -914,10 +914,9 @@ class IndicatorSyncthing(object):
         dialog.set_logo(None)
         dialog.set_program_name('Indicator Syncthing')
         dialog.set_version(VERSION)
-        dialog.set_website(
-            'https://github.com/vincent-t/syncthing-ubuntu-indicator')
-        dialog.set_comments('This menu applet for systems supporting AppIndicator'
-                            '\ncan show the status of a Syncthing instance')
+        dialog.set_website('https://github.com/vincent-t/indicator-syncthing')
+        dialog.set_comments(
+            'This menu applet for systems supporting AppIndicator\ncan show the status of a Syncthing instance')
         dialog.set_license(self.license())
         dialog.run()
         dialog.destroy()
