@@ -1,29 +1,29 @@
 #!/bin/bash
 
-PACKAGENAME=syncthing-ubuntu-indicator
+PACKAGENAME=indicator-syncthing
 VERSION=1.0.0
 MAINTAINER=
 EMAIL=
 
 echo "Build $PACKAGENAME.deb"
 
-mkdir -p "$PACKAGENAME/usr/bin" "$PACKAGENAME/etc/xdg/autostart" "$PACKAGENAME/usr/bin" "$PACKAGENAME/usr/share/syncthing-ubuntu-indicator"
+mkdir -p "$PACKAGENAME/usr/bin" "$PACKAGENAME/etc/xdg/autostart" "$PACKAGENAME/usr/bin" "$PACKAGENAME/usr/share/$PACKAGENAME"
 
-wget -nc -O - "https://github.com/vincent-t/syncthing-ubuntu-indicator/archive/master.tar.gz" | tar -xvzf - -C $PACKAGENAME/usr/share/syncthing-ubuntu-indicator --strip-components=1 --exclude='README.md' --exclude='make_deb.sh' --exclude="*.gitignore" --exclude="*.svg"
+wget -nc -O - "https://github.com/vincent-t/syncthing-ubuntu-indicator/archive/master.tar.gz" | tar -xvzf - -C "$PACKAGENAME/usr/share/$PACKAGENAME" --strip-components=1 --exclude='README.md' --exclude='make_deb.sh' --exclude="*.gitignore" --exclude="*.svg"
 
-tee "$PACKAGENAME/etc/xdg/autostart/syncthing-ubuntu-indicator.desktop" << 'EOF'
+tee "$PACKAGENAME/etc/xdg/autostart/$PACKAGENAME.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=syncthing-ubuntu-indicator
+Name=$PACKAGENAME
 Comment=AppIndicator for Syncthing
-Exec=syncthing-ubuntu-indicator --loglevel warning
+Exec=$PACKAGENAME --loglevel warning
 StartupNotify=false
 X-GNOME-Autostart-enabled=true
 EOF
 
 #Create softlink
-ln -s "/usr/share/syncthing-ubuntu-indicator/syncthing-ubuntu-indicator.py" "$PACKAGENAME/usr/bin/syncthing-ubuntu-indicator"
+ln -s "/usr/share/syncthing-ubuntu-indicator/$PACKAGENAME.py" "$PACKAGENAME/usr/bin/$PACKAGENAME"
 
 PACKAGESIZE=$(du -c $PACKAGENAME | egrep -i 'total|insgesamt' | cut -f1)
 
@@ -34,7 +34,7 @@ Version: $VERSION
 Architecture: all
 Maintainer: $MAINTAINER <$EMAIL>
 Installed-Size: $PACKAGESIZE
-Depends: python3-dateutil, python3-gi, python3-requests, python3-requests-futures, python3-tz
+Depends: python3-dateutil, python3-gi, python3-requests, python3-requests-futures
 Section: python
 Priority: optional
 Homepage: https://github.com/vincent-t/syncthing-ubuntu-indicator
