@@ -27,6 +27,28 @@ VERSION = '1.0.0'
 APPINDICATOR_ID = 'indicator-syncthing'
 
 
+def shorten_path(text, maxlength=80):
+    if len(text) <= maxlength:
+        return text
+    head, tail = os.path.split(text)
+    if len(tail) > maxlength:
+        return tail[:maxlength]  # TODO: separate file extension
+    while len(head) + len(tail) > maxlength:
+        head = '/'.join(head.split('/')[:-1])
+        if head == '':
+            return '.../' + tail
+    return head + '/.../' + tail
+
+
+def human_readable(num):
+    for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB']:
+        if abs(num) < 1024.0:
+            f = '{:.1f}'.format(num).rstrip('0').rstrip('.')
+            return '{} {}'.format(f, unit)
+        num = num / 1024.0
+    return '{:.1f} {}'.format(num, 'YiB')
+
+
 class IndicatorSyncthing(object):
 
     def __init__(self, args):
@@ -69,26 +91,6 @@ class IndicatorSyncthing(object):
         self.current_action = (None, None)
 
         glib.idle_add(self.load_config_begin)
-
-    def shorten_path(text, maxlength=80):
-        if len(text) <= maxlength:
-            return text
-        head, tail = os.path.split(text)
-        if len(tail) > maxlength:
-            return tail[:maxlength]  # TODO: separate file extension
-        while len(head) + len(tail) > maxlength:
-            head = '/'.join(head.split('/')[:-1])
-            if head == '':
-                return '.../' + tail
-        return head + '/.../' + tail
-
-    def human_readable(num):
-        for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB']:
-            if abs(num) < 1024.0:
-                f = '{:.1f}'.format(num).rstrip('0').rstrip('.')
-                return '{} {}'.format(f, unit)
-            num = num / 1024.0
-        return '{:.1f} {}'.format(num, 'YiB')
 
     def create_menu(self):
         self.menu = gtk.Menu()
