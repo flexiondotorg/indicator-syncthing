@@ -738,7 +738,7 @@ class IndicatorSyncthing(object):
                 self.current_files_submenu.remove(child)
             for f in self.downloading_files:
                 fj = json.dumps(f)
-                # mi = gtk.MenuItem(u"\u2193 [{}] {}".format(
+                # mi = gtk.MenuItem("\u2193 [{}] {}".format(
                 #    f["folder"],
                 #    shorten_path(f["file"])))
                 mi = gtk.MenuItem("\u2193 [{}] {}{}".format(
@@ -863,12 +863,7 @@ class IndicatorSyncthing(object):
             self.mi_shutdown_syncthing.set_sensitive(False)
 
     def count_connected(self):
-        # Prevent counting local running syncthing instance
-        l = len([e for e in self.devices if e["connected"]]) - 1
-        if l >= 0:
-            return l
-        else:
-            return 0
+        return len([e for e in self.devices if e['connected']])
 
     def syncthing_start(self, *args):
         self.mi_start_syncthing.set_sensitive(False)
