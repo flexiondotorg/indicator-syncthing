@@ -1,0 +1,4 @@
+python_dateutil>=2.8.0
+requests_futures>=1.0.0
+requests>=2.18.0
+PyGObject>=3.34.0
