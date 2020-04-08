@@ -26,7 +26,7 @@ from gi.repository import Gio as gio
 from gi.repository import GLib as glib
 from gi.repository import AppIndicator3 as appindicator
 
-__version__ = VERSION = "1.0.0"
+__version__ = VERSION = "1.0.1"
 APPINDICATOR_ID = "indicator-syncthing"
 
 
