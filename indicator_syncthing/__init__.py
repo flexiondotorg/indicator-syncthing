@@ -26,11 +26,9 @@ A Syncthing status menu for Unity and other desktops that support AppIndicator.
 #
 
 # stdlib
-import argparse
 import json
 import logging as log
 import os
-import signal
 import socket  # used only to catch exceptions
 import subprocess
 import time
@@ -42,15 +40,16 @@ from xml.dom import minidom
 import gi
 import requests  # used only to catch exceptions
 from dateutil.parser import parse
-from requests_futures.sessions import FuturesSession
+from requests_futures.sessions import FuturesSession  # type: ignore
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("AppIndicator3", "0.1")
-from gi.repository import Gtk as gtk
+
+# 3rd party
+from gi.repository import AppIndicator3 as appindicator  # type: ignore
 from gi.repository import Gio as gio
 from gi.repository import GLib as glib
-from gi.repository import AppIndicator3 as appindicator
-
+from gi.repository import Gtk as gtk
 
 __author__ = "Dominic Davis-Foster"
 __copyright__ = "2020 Dominic Davis-Foster"
@@ -70,8 +69,8 @@ def get_lock(process_name):
 	try:
 		get_lock._lock_socket.bind("\0" + process_name)
 		print("Created lock for process:", process_name)
-	except socket.error:
-		print("Lock exists. Process:", process_name, "is allready running")
+	except OSError:
+		print("Lock exists. Process:", process_name, "is already running")
 		exit()
 
 
@@ -97,19 +96,21 @@ def human_readable(size):
 	return f"{size:.1f} {'YiB'}"
 
 
-class IndicatorSyncthing(object):
+class IndicatorSyncthing:
 
 	def __init__(self, args):
 		log.info("Started main procedure")
 		self.args = args
 		self.wd = os.path.dirname(os.path.realpath(__file__))
 		self.icon_path = os.path.join(self.wd, "icons")
+
 		if not self.args.text_only:
 			self.ind = appindicator.Indicator.new_with_path(
 					APPINDICATOR_ID,
 					"syncthing-client-idle",
 					appindicator.IndicatorCategory.APPLICATION_STATUS,
-					self.icon_path)
+					self.icon_path,
+					)
 			self.ind.set_status(appindicator.IndicatorStatus.ACTIVE)
 
 		self.state = {
@@ -281,7 +282,7 @@ class IndicatorSyncthing(object):
 			if not address[0].hasChildNodes():
 				raise Exception("No address specified in config")
 
-			self.syncthing_base = "http://%s" % address[0].firstChild.nodeValue
+			self.syncthing_base = f"http://{address[0].firstChild.nodeValue}"
 
 			# Find and fetch the api key
 			api_key = gui[0].getElementsByTagName("apikey")
@@ -334,7 +335,7 @@ class IndicatorSyncthing(object):
 		return urljoin(self.syncthing_base, url)
 
 	def open_web_ui(self, *_):
-		wb.open(self.syncthing_url(""))
+		wb.open(self.syncthing_url(''))
 
 	@staticmethod
 	def open_releases_page(*_):
@@ -344,8 +345,7 @@ class IndicatorSyncthing(object):
 		log.debug(f"rest_post: {rest_path}")
 		headers = {"X-API-Key": self.api_key}
 		if rest_path in ["/rest/system/restart", "/rest/system/shutdown"]:
-			f = self.session.post(
-					self.syncthing_url(rest_path), headers=headers)
+			f = self.session.post(self.syncthing_url(rest_path), headers=headers)
 		return False
 
 	def rest_get(self, rest_path):
@@ -420,15 +420,11 @@ class IndicatorSyncthing(object):
 				for qitem in json_data:
 					self.process_event(qitem)
 			except Exception as e:
-				log.warning(
-						f"rest_receive_data: error processing event ({e})")
+				log.warning(f"rest_receive_data: error processing event ({e})")
 				log.debug(f"qitem: {qitem}")
 				self.set_state("error")
 		else:
-			fn = getattr(
-					self,
-					f"process_{rest_path.strip('/').replace('/', '_')}"
-					)(json_data)
+			fn = getattr(self, f"process_{rest_path.strip('/').replace('/', '_')}")(json_data)
 
 	# Processing of the events coming from the event interface
 	def process_event(self, event):
@@ -514,8 +510,7 @@ class IndicatorSyncthing(object):
 
 	def event_starting(self, event):
 		self.set_state("paused")
-		log.info(
-				f"Received that Syncthing was starting at: {event['time']}")
+		log.info(f"Received that Syncthing was starting at: {event['time']}")
 		# Check for added/removed devices or folders.
 		glib.idle_add(self.rest_get, "/rest/system/config")
 		glib.idle_add(self.rest_get, "/rest/system/version")
@@ -601,7 +596,9 @@ class IndicatorSyncthing(object):
 			# For the first hour, the most recent version is kept every 30 seconds.
 			# For the first day, the most recent version is kept every hour.
 			# For the first 30 days, the most recent version is kept every day.
-			log.debug(f"File locally updated: {file_details['file']} ({event['data']['action']}) at {event['time']}")
+			log.debug(
+					f"File locally updated: {file_details['file']} ({event['data']['action']}) at {event['time']}"
+					)
 		except ValueError:
 			log.debug(f"Completed a file we didn't know about: {event['data']['item']}")
 
@@ -659,8 +656,7 @@ class IndicatorSyncthing(object):
 	def process_rest_system_upgrade(self, data):
 		self.syncthing_version = data["running"]
 		if data["newer"]:
-			self.syncthing_upgrade_menu.set_label(
-					"New version available: %s" % data["latest"])
+			self.syncthing_upgrade_menu.set_label(f"New version available: {data['latest']}")
 			self.syncthing_upgrade_menu.show()
 		else:
 			self.syncthing_upgrade_menu.hide()
@@ -751,14 +747,12 @@ class IndicatorSyncthing(object):
 						if len(dev["lastSeen"]) > 0:
 							mi.set_label(f"{dev['name']} (Last seen {self.convert_time(dev['lastSeen'])})")
 						else:
-							mi.set_label(
-									f"{dev['name']} (Last seen Unknown)")
+							mi.set_label(f"{dev['name']} (Last seen Unknown)")
 
 					mi.set_sensitive(dev["connected"])
 
 	def update_files(self):
-		self.current_files_menu.set_label("Downloading %s files" % (
-				len(self.downloading_files)))
+		self.current_files_menu.set_label(f"Downloading {len(self.downloading_files)} files")
 
 		if not self.downloading_files:
 			self.current_files_menu.set_sensitive(False)
@@ -772,16 +766,20 @@ class IndicatorSyncthing(object):
 			for f in self.downloading_files:
 				fj = json.dumps(f)
 				# mi = gtk.MenuItem(f"\u2193 [{f['folder']}] {shorten_path(f['file'])}")
-				mi = gtk.MenuItem("\u2193 [{}] {}{}".format(
-						f["folder"],
-						shorten_path(f["file"]),
-						self.downloading_files_extra[fj]["progress"] if fj in self.downloading_files_extra and "progress" in self.downloading_files_extra[fj] else ""))
+				mi = gtk.MenuItem(
+						"\u2193 [{}] {}{}".format(
+								f["folder"],
+								shorten_path(f["file"]),
+								self.downloading_files_extra[fj]["progress"] if fj in self.downloading_files_extra
+								and "progress" in self.downloading_files_extra[fj] else ""
+								)
+						)
 				self.current_files_submenu.append(mi)
 				mi.connect(
 						"activate",
 						self.open_file_browser,
-						os.path.split(
-								self.get_full_path(f["folder"], f["file"]))[0])
+						os.path.split(self.get_full_path(f["folder"], f["file"]))[0]
+						)
 				mi.show()
 			self.current_files_menu.show()
 
@@ -806,8 +804,8 @@ class IndicatorSyncthing(object):
 				mi.connect(
 						"activate",
 						self.open_file_browser,
-						os.path.split(
-								self.get_full_path(f["folder"], f["file"]))[0])
+						os.path.split(self.get_full_path(f["folder"], f["file"]))[0]
+						)
 				mi.show()
 			self.recent_files_menu.show()
 		self.state["update_files"] = False
@@ -819,11 +817,9 @@ class IndicatorSyncthing(object):
 			if len(self.folders) == len(self.folder_menu_submenu):
 				for mi in self.folder_menu_submenu:
 					for elm in self.folders:
-						folder_maxlength = max(
-								folder_maxlength, len(elm["id"]))
+						folder_maxlength = max(folder_maxlength, len(elm["id"]))
 						if folder_maxlength < max(folder_maxlength, len(elm["label"])):
-							folder_maxlength = max(
-									folder_maxlength, len(elm["label"]))
+							folder_maxlength = max(folder_maxlength, len(elm["label"]))
 						if str(mi.get_label()).split(" ", 1)[0] == elm["id"]:
 							if elm["state"] == "scanning":
 								# mi.set_label(f"{elm['id']} (scanning)")
@@ -835,25 +831,26 @@ class IndicatorSyncthing(object):
 									lbltext = "{fid} (syncing {num} file, {bytes})"
 								else:
 									lbltext = "{fid} (syncing)"
-								mi.set_label(lbltext.format(
-										# fid=elm["id"], num=elm.get("needFiles"),
-										fid=elm["id"] or elm["label"], num=elm.get("needFiles"),
-										bytes=human_readable(elm.get("needBytes", 0))))
+								mi.set_label(
+										lbltext.format(
+												# fid=elm["id"], num=elm.get("needFiles"),
+												fid=elm["id"] or elm["label"],
+												num=elm.get("needFiles"),
+												bytes=human_readable(elm.get("needBytes", 0))
+												)
+										)
 							else:
 								# mi.set_label(elm["id"].ljust(folder_maxlength + 20))
-								mi.set_label(elm["id"] or elm["label"].ljust(
-										folder_maxlength + 20))
+								mi.set_label(elm["id"] or elm["label"].ljust(folder_maxlength + 20))
 			else:
 				for child in self.folder_menu_submenu.get_children():
 					self.folder_menu_submenu.remove(child)
 				for elm in self.folders:
 					folder_maxlength = max(folder_maxlength, len(elm["id"]))
 					if folder_maxlength < max(folder_maxlength, len(elm["label"])):
-						folder_maxlength = max(
-								folder_maxlength, len(elm["label"]))
+						folder_maxlength = max(folder_maxlength, len(elm["label"]))
 					# mi = gtk.MenuItem(elm["id"].ljust(folder_maxlength + 20))
-					mi = gtk.MenuItem(
-							(elm["label"] or elm["id"]).ljust(folder_maxlength + 20))
+					mi = gtk.MenuItem((elm["label"] or elm["id"]).ljust(folder_maxlength + 20))
 					mi.connect("activate", self.open_file_browser, elm["path"])
 					self.folder_menu_submenu.append(mi)
 					mi.show()
@@ -938,20 +935,20 @@ class IndicatorSyncthing(object):
 		return old / (new * 10)
 
 	def license(self):
-		with open(os.path.join(self.wd, "LICENSE"), "r") as f:
+		with open(os.path.join(self.wd, "LICENSE")) as f:
 			lic = f.read()
 		return lic
 
 	def show_about(self, _):
 		dialog = gtk.AboutDialog()
-		dialog.set_default_icon_from_file(
-				os.path.join(self.icon_path, "icon.png"))
+		dialog.set_default_icon_from_file(os.path.join(self.icon_path, "icon.png"))
 		dialog.set_logo(None)
 		dialog.set_program_name("Indicator Syncthing")
 		dialog.set_version(VERSION)
 		dialog.set_website("https://github.com/vincent-t/indicator-syncthing")
 		dialog.set_comments(
-				"This menu applet for systems supporting AppIndicator\ncan show the status of a Syncthing instance")
+				"This menu applet for systems supporting AppIndicator\ncan show the status of a Syncthing instance"
+				)
 		dialog.set_license(self.license())
 		dialog.run()
 		dialog.destroy()
@@ -968,10 +965,7 @@ class IndicatorSyncthing(object):
 			self.state["set_icon"] = self.folder_check_state()
 
 	def folder_check_state(self):
-		state = {
-				"syncing": 0, "idle": 0, "cleaning": 0, "scanning": 0,
-				"unknown": 0
-				}
+		state = {"syncing": 0, "idle": 0, "cleaning": 0, "scanning": 0, "unknown": 0}
 		for elem in self.folders:
 			if elem["state"] in state:
 				state[elem["state"]] += 1
@@ -1045,6 +1039,3 @@ class IndicatorSyncthing(object):
 			if elem["id"] == folder:
 				a = elem["path"]
 		return os.path.join(a, item)
-
-if __name__ == "__main__":
-	main()

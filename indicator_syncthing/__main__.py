@@ -31,7 +31,8 @@ import logging as log
 import os
 import signal
 
-from indicator_syncthing import get_lock, IndicatorSyncthing
+# this package
+from indicator_syncthing import IndicatorSyncthing, get_lock
 
 
 def main():
@@ -43,33 +44,50 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument(
 			"--loglevel",
-			choices=["debug", "info", "warning", "error"], default="info",
-			help="Filter logging by level. Default: %(default)s")
+			choices=["debug", "info", "warning", "error"],
+			default="info",
+			help="Filter logging by level. Default: %(default)s"
+			)
+	parser.add_argument("--log-events", action="store_true", help="Log every event")
 	parser.add_argument(
-			"--log-events", action="store_true",
-			help="Log every event")
+			"--timeout-event",
+			type=int,
+			default=10,
+			metavar="N",
+			help="Interval for polling event interface, in seconds. Default: %(default)s"
+			)
 	parser.add_argument(
-			"--timeout-event", type=int, default=10, metavar="N",
-			help="Interval for polling event interface, in seconds. Default: %(default)s")
+			"--timeout-rest",
+			type=int,
+			default=30,
+			metavar="N",
+			help="Interval for polling REST interface, in seconds. Default: %(default)s"
+			)
 	parser.add_argument(
-			"--timeout-rest", type=int, default=30, metavar="N",
-			help="Interval for polling REST interface, in seconds. Default: %(default)s")
+			"--timeout-gui",
+			type=int,
+			default=5,
+			metavar="N",
+			help="Interval for refreshing GUI, in seconds. Default: %(default)s"
+			)
 	parser.add_argument(
-			"--timeout-gui", type=int, default=5, metavar="N",
-			help="Interval for refreshing GUI, in seconds. Default: %(default)s")
+			"--no-shutdown", action="store_true", help="Hide Start, Restart, and Shutdown Syncthing menus"
+			)
 	parser.add_argument(
-			"--no-shutdown", action="store_true",
-			help="Hide Start, Restart, and Shutdown Syncthing menus")
-	parser.add_argument(
-			"--timeformat", type=str, default="%x %X",
+			"--timeformat",
+			type=str,
+			default="%x %X",
 			metavar="FORMAT",
-			help="Format to display date and time. See 'man strftime' for help. Default: %(default)s")
+			help="Format to display date and time. See 'man strftime' for help. Default: %(default)s"
+			)
+	parser.add_argument("--text-only", action="store_true", help="Text only, no icon")
 	parser.add_argument(
-			"--text-only", action="store_true",
-			help="Text only, no icon")
-	parser.add_argument(
-			"--nb-recent-files", type=int, default=20, metavar="N",
-			help="Number of recent files entries to keep. Default: %(default)s")
+			"--nb-recent-files",
+			type=int,
+			default=20,
+			metavar="N",
+			help="Number of recent files entries to keep. Default: %(default)s"
+			)
 
 	args, unknown = parser.parse_known_args()
 	for arg in [args.timeout_event, args.timeout_rest, args.timeout_gui]:
@@ -77,13 +95,8 @@ def main():
 			print("Timeouts must be integers greater than 0")
 			exit()
 
-	loglevels = {
-			"debug": log.DEBUG, "info": log.INFO,
-			"warning": log.WARNING, "error": log.ERROR
-			}
-	log.basicConfig(
-			format="%(asctime)s %(levelname)s: %(message)s",
-			level=loglevels[args.loglevel])
+	loglevels = {"debug": log.DEBUG, "info": log.INFO, "warning": log.WARNING, "error": log.ERROR}
+	log.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=loglevels[args.loglevel])
 
 	# set log level of requests library
 	log.getLogger("urllib3.connectionpool").setLevel(log.WARNING)
