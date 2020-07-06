@@ -3,7 +3,7 @@ import_name: indicator_syncthing
 copyright_years: 2020
 author: Dominic Davis-Foster
 email: "dominic@davis-foster.co.uk"
-version: "1.0.1"
+version: "0.1.0"
 username: domdfcoding
 license: Apache
 short_desc: 'A Syncthing status menu for Unity and other desktops that support AppIndicator.'

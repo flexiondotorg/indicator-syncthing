@@ -77,7 +77,7 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 .. |language| image:: https://img.shields.io/github/languages/top/domdfcoding/indicator-syncthing
 	:alt: GitHub top language
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/domdfcoding/indicator-syncthing/v1.0.1
+.. |commits-since| image:: https://img.shields.io/github/commits-since/domdfcoding/indicator-syncthing/v0.1.0
 	:target: https://github.com/domdfcoding/indicator-syncthing/pulse
 	:alt: GitHub commits since tagged version
 

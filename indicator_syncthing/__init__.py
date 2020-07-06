@@ -55,7 +55,7 @@ __author__ = "Dominic Davis-Foster"
 __copyright__ = "2020 Dominic Davis-Foster"
 
 __license__ = "Apache Software License"
-__version__ = VERSION = "1.0.1"
+__version__ = VERSION = "0.1.0"
 __email__ = "dominic@davis-foster.co.uk"
 
 APPINDICATOR_ID = "indicator-syncthing"
