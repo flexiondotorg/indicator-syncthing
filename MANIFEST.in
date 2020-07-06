@@ -1,3 +1,7 @@
 include __pkginfo__.py
-include requirements.txt
 include LICENSE
+include requirements.txt
+recursive-exclude **/__pycache__ *
+recursive-include indicator_syncthing/icons *
+recursive-include indicator_syncthing/ *.pyi
+include indicator_syncthing/py.typed
