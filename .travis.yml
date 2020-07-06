@@ -1,7 +1,7 @@
 # This file is managed by `repo_helper`. Don't edit it directly
 
 language: python
-dist: xenial
+dist: bionic
 cache: pip
 python:
   - '3.6'
@@ -9,6 +9,8 @@ python:
   - '3.8'
 
 install:
+  - sudo apt update
+  - sudo apt install libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
 
   - pip install pip  --upgrade
   - pip install tox tox-travis
