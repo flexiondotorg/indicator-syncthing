@@ -1,32 +1,25 @@
 #!/usr/bin/env python
+# This file is managed by `repo_helper`. Don't edit it directly
 """Setup script"""
 
-from __pkginfo__ import (
-	author, author_email, install_requires,
-	license, long_description, classifiers,
-	entry_points, modname, py_modules,
-	short_desc, web, data_files,
-	)
+# 3rd party
+from setuptools import find_packages, setup
 
-from indicator_syncthing import VERSION, APPINDICATOR_ID
-
-
-from setuptools import setup
-
+# this package
+from __pkginfo__ import *  # pylint: disable=wildcard-import
 
 # Create .desktop file
-with open(f"{APPINDICATOR_ID}.desktop", "w") as desktop:
+with open(f'indicator-syncthing.desktop', 'w') as desktop:
 	desktop.write(f"""[Desktop Entry]
-Version={VERSION}
+Version={__version__}
 Name={modname}
 Comment={short_desc}
-Exec={APPINDICATOR_ID}
+Exec=indicator-syncthing
 Icon=syncthing
 Terminal=false
 Type=Application
 Categories=Utility;
 """)
-
 
 setup(
 		author=author,
@@ -34,13 +27,19 @@ setup(
 		classifiers=classifiers,
 		description=short_desc,
 		entry_points=entry_points,
+		extras_require=extras_require,
+		include_package_data=True,
 		install_requires=install_requires,
-		license=license,
+		keywords=keywords,
+		license=__license__,
 		long_description=long_description,
-		name=modname,
-		# packages=find_packages(exclude=("tests",)),
+		name=pypi_name,
+		packages=find_packages(exclude=("tests", "doc-source")),
+		project_urls=project_urls,
 		py_modules=py_modules,
+		python_requires=">=3.6",
 		url=web,
-		version=VERSION,
-		data_files=data_files,
+		version=__version__,
+		zip_safe=False,
+		data_files=[('share/applications', ['indicator-syncthing.desktop'])],
 		)

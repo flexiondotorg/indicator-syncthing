@@ -1,0 +1,61 @@
+modname: indicator-syncthing
+import_name: indicator_syncthing
+copyright_years: 2020
+author: Dominic Davis-Foster
+email: "dominic@davis-foster.co.uk"
+version: "1.0.1"
+username: domdfcoding
+license: Apache
+short_desc: 'A Syncthing status menu for Unity and other desktops that support AppIndicator.'
+
+enable_conda: False
+enable_tests: False
+
+console_scripts:
+  - "indicator_syncthing = indicator_syncthing.__main__:main"
+  - "indicator-syncthing = indicator_syncthing.__main__:main"
+
+python_deploy_version: 3.6
+
+# Versions to run tests for
+python_versions:
+  - '3.6'
+  - '3.7'
+  - '3.8'
+
+# travis secure password for PyPI
+#travis_pypi_secure:
+
+# additional lines for MANIFEST.in
+manifest_additional:
+  - "recursive-include indicator_syncthing/icons *"
+
+classifiers:
+  - 'Development Status :: 4 - Beta'
+  #  - "Development Status :: 5 - Production/Stable"
+#  - "Development Status :: 6 - Mature"
+#  - "Development Status :: 7 - Inactive"
+  - 'Intended Audience :: End Users/Desktop'
+  - 'Operating System :: POSIX :: Linux'
+  - 'Topic :: Utilities'
+
+additional_setup_args:
+  data_files: "[('share/applications', ['indicator-syncthing.desktop'])]"
+
+additional_ignore:
+  - "*.desktop"
+  - "*.deb"
+
+setup_pre:
+  - "# Create .desktop file"
+  - "with open(f'indicator-syncthing.desktop', 'w') as desktop:"
+  - "\tdesktop.write(f\"\"\"[Desktop Entry]"
+  - "Version={__version__}"
+  - "Name={modname}"
+  - "Comment={short_desc}"
+  - "Exec=indicator-syncthing"
+  - "Icon=syncthing"
+  - "Terminal=false"
+  - "Type=Application"
+  - "Categories=Utility;"
+  - "\"\"\")"

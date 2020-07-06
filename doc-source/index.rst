@@ -76,7 +76,7 @@ indicator-syncthing
 .. |language| image:: https://img.shields.io/github/languages/top/domdfcoding/indicator-syncthing
 	:alt: GitHub top language
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/domdfcoding/indicator-syncthing/v0.0.1
+.. |commits-since| image:: https://img.shields.io/github/commits-since/domdfcoding/indicator-syncthing/v1.0.1
 	:target: https://github.com/domdfcoding/indicator-syncthing/pulse
 	:alt: GitHub commits since tagged version
 
