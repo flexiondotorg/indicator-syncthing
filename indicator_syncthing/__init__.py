@@ -47,9 +47,9 @@ gi.require_version("AppIndicator3", "0.1")
 
 # 3rd party
 from gi.repository import AppIndicator3 as appindicator  # type: ignore
-from gi.repository import Gio as gio
-from gi.repository import GLib as glib
-from gi.repository import Gtk as gtk
+from gi.repository import Gio as gio  # type: ignore
+from gi.repository import GLib as glib  # type: ignore
+from gi.repository import Gtk as gtk  # type: ignore
 
 __author__ = "Dominic Davis-Foster"
 __copyright__ = "2020 Dominic Davis-Foster"
