@@ -26,7 +26,7 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 	* - Docs
 	  - |docs| |docs_check|
 	* - Tests
-	  - |travis| |actions_windows| |actions_macos| |codefactor|
+	  - |travis| |codefactor|
 	* - PyPI
 	  - |pypi-version| |supported-versions| |supported-implementations| |wheel|
 	* - Activity
@@ -45,14 +45,6 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 .. |travis| image:: https://img.shields.io/travis/com/domdfcoding/indicator-syncthing/master?logo=travis
 	:target: https://travis-ci.com/domdfcoding/indicator-syncthing
 	:alt: Travis Build Status
-
-.. |actions_windows| image:: https://github.com/domdfcoding/indicator-syncthing/workflows/Windows%20Tests/badge.svg
-	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%22Windows+Tests%22
-	:alt: Windows Tests Status
-
-.. |actions_macos| image:: https://github.com/domdfcoding/indicator-syncthing/workflows/macOS%20Tests/badge.svg
-	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%22macOS+Tests%22
-	:alt: macOS Tests Status
 
 .. |requires| image:: https://requires.io/github/domdfcoding/indicator-syncthing/requirements.svg?branch=master
 	:target: https://requires.io/github/domdfcoding/indicator-syncthing/requirements/?branch=master
