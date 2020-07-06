@@ -36,7 +36,7 @@ jobs:
         provider: pypi
         user: "DomDF"
         password:
-          secure:
+          secure: jY2DXZTADTYjT5l7BK9CaQ3Hi/zy/M+tYV7GkMOKgwlzhIKinniR16VvA6nnZPJTO5f5urvH0B2Tmy3ue+k1RowB/QXcERFDmkSnpuijsEUMWEV63L8gXpvnSkmcA5/azubofrYDs0DT00FyPm1Sapc/RXi1THDLYCTju3wq0mkPzmXjBQMP9z86Rn46FGSpCV9N76JIPORSCmBcUHivTw2mQ87aTWby6VgF8zwBSHyAPad5Qo/kXfse0EFIhZ2wnpsEXL/SztcrTr3OPRSUmEO/2F6wdZANP4X7rykL2btcflXZrSLRMbTOAK3gg9qD/lRLBj51W0mpxevihYVBbGs35gV7CBlaolj6eDRtcnPtFOpMOzB2oVYJespiLg8ucmcdd7qUZ8nv86U8HJz22KpiemCqsaOUAdeM/6JQqo4YUws7bhDhAs5Z5cWGexvKC8xUacGPzJGEBJWa7uillgTeZZ4q97smZg5O7ajoDPdA4KNAZ/tAe8Cl41vjEiuut4rOLCDjJj2lMtIilwr5WP8UWFUI09AUjRFDGjlV/LOojvUl3sfHIDSMNDdvio+Uj+3cTzWfifK2Bfx0nDGhE/5/726J35QVCsw4TEJO0eNn2xeshrfasxxoTxL4jSlKfNate0MDNf1rFEkLuWreFkD9q8VaX6X6jsneOzqsN/4=
         distributions: "sdist bdist_wheel"
         skip_existing: true
 
