@@ -26,25 +26,25 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 	* - Docs
 	  - |docs| |docs_check|
 	* - Tests
-	  - |travis| |codefactor|
+	  - |travis| |codefactor| |pre_commit_ci|
 	* - PyPI
 	  - |pypi-version| |supported-versions| |supported-implementations| |wheel|
 	* - Activity
 	  - |commits-latest| |commits-since| |maintained|
 	* - Other
-	  - |license| |language| |requires|
+	  - |license| |language| |requires| |pre_commit|
 
 .. |docs| image:: https://img.shields.io/readthedocs/indicator-syncthing/latest?logo=read-the-docs
 	:target: https://indicator-syncthing.readthedocs.io/en/latest/?badge=latest
-	:alt: Documentation Status
+	:alt: Documentation Build Status
 
 .. |docs_check| image:: https://github.com/domdfcoding/indicator-syncthing/workflows/Docs%20Check/badge.svg
 	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%22Docs+Check%22
 	:alt: Docs Check Status
 
-.. |travis| image:: https://img.shields.io/travis/com/domdfcoding/indicator-syncthing/master?logo=travis
-	:target: https://travis-ci.com/domdfcoding/indicator-syncthing
-	:alt: Travis Build Status
+.. |travis| image:: https://github.com/domdfcoding/indicator-syncthing/workflows/Linux%20Tests/badge.svg
+	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%Linux+Tests%22
+	:alt: Linux Test Status
 
 .. |requires| image:: https://requires.io/github/domdfcoding/indicator-syncthing/requirements.svg?branch=master
 	:target: https://requires.io/github/domdfcoding/indicator-syncthing/requirements/?branch=master
@@ -58,7 +58,7 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 	:target: https://pypi.org/project/indicator-syncthing/
 	:alt: PyPI - Package Version
 
-.. |supported-versions| image:: https://img.shields.io/pypi/pyversions/indicator-syncthing
+.. |supported-versions| image:: https://img.shields.io/pypi/pyversions/indicator-syncthing?logo=python&logoColor=white
 	:target: https://pypi.org/project/indicator-syncthing/
 	:alt: PyPI - Supported Python Versions
 
@@ -87,6 +87,14 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 
 .. |maintained| image:: https://img.shields.io/maintenance/yes/2020
 	:alt: Maintenance
+
+.. |pre_commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+	:target: https://github.com/pre-commit/pre-commit
+	:alt: pre-commit
+
+.. |pre_commit_ci| image:: https://results.pre-commit.ci/badge/github/domdfcoding/indicator-syncthing/master.svg
+	:target: https://results.pre-commit.ci/latest/github/domdfcoding/indicator-syncthing/master
+	:alt: pre-commit.ci status
 
 .. end shields
 

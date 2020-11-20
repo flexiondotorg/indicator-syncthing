@@ -1,5 +1,5 @@
-#  This file is managed by `repo_helper`. Don't edit it directly
-#  Copyright (C) 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
+#  This file is managed by 'repo_helper'. Don't edit it directly.
+#  Copyright © 2020 Dominic Davis-Foster <dominic@davis-foster.co.uk>
 #
 #  This file is distributed under the same license terms as the program it came with.
 #  There will probably be a file called LICEN[S/C]E in the same directory as this file.
@@ -17,26 +17,9 @@ import pathlib
 __all__ = [
 		"__copyright__",
 		"__version__",
-		"modname",
-		"pypi_name",
-		"py_modules",
-		"entry_points",
-		"__license__",
-		"__author__",
-		"short_desc",
-		"author",
-		"author_email",
-		"github_username",
-		"web",
-		"github_url",
-		"project_urls",
 		"repo_root",
-		"long_description",
 		"install_requires",
 		"extras_require",
-		"classifiers",
-		"keywords",
-		"import_name",
 		]
 
 __copyright__ = """
@@ -45,49 +28,6 @@ __copyright__ = """
 
 __version__ = "0.1.0"
 
-modname = "indicator-syncthing"
-pypi_name = "indicator-syncthing"
-import_name = "indicator_syncthing"
-py_modules = []
-entry_points = {
-		"console_scripts": ['indicator_syncthing = indicator_syncthing.__main__:main', 'indicator-syncthing = indicator_syncthing.__main__:main']
-		}
-
-__license__ = "Apache Software License"
-
-short_desc = "A Syncthing status menu for Unity and other desktops that support AppIndicator."
-
-__author__ = author = "Dominic Davis-Foster"
-author_email = "dominic@davis-foster.co.uk"
-github_username = "domdfcoding"
-web = github_url = f"https://github.com/domdfcoding/indicator-syncthing"
-project_urls = {
-		"Documentation": f"https://indicator-syncthing.readthedocs.io",
-		"Issue Tracker": f"{github_url}/issues",
-		"Source Code": github_url,
-		}
-
 repo_root = pathlib.Path(__file__).parent
-
-# Get info from files; set: long_description
-long_description = (repo_root / "README.rst").read_text(encoding="utf-8").replace("0.1.0", __version__) + '\n'
-
 install_requires = (repo_root / "requirements.txt").read_text(encoding="utf-8").split('\n')
-extras_require = {'all': []}
-
-classifiers = [
-		'Development Status :: 4 - Beta',
-		'Intended Audience :: End Users/Desktop',
-		'License :: OSI Approved :: Apache Software License',
-		'Operating System :: POSIX :: Linux',
-		'Programming Language :: Python',
-		'Programming Language :: Python :: 3 :: Only',
-		'Programming Language :: Python :: 3.6',
-		'Programming Language :: Python :: 3.7',
-		'Programming Language :: Python :: 3.8',
-		'Programming Language :: Python :: Implementation :: CPython',
-		'Topic :: Utilities',
-
-		]
-
-keywords = ""
+extras_require = {"all": []}

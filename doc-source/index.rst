@@ -17,67 +17,76 @@ indicator-syncthing
 	* - Docs
 	  - |docs| |docs_check|
 	* - Tests
-	  - |travis| |codefactor|
+	  - |travis| |codefactor| |pre_commit_ci|
 	* - PyPI
 	  - |pypi-version| |supported-versions| |supported-implementations| |wheel|
 	* - Activity
 	  - |commits-latest| |commits-since| |maintained|
 	* - Other
-	  - |license| |language| |requires|
+	  - |license| |language| |requires| |pre_commit|
 
-.. |docs| image:: https://img.shields.io/readthedocs/indicator-syncthing/latest?logo=read-the-docs
-	:target: https://indicator-syncthing.readthedocs.io/en/latest/?badge=latest
-	:alt: Documentation Status
+.. |docs| rtfd-shield::
+	:project: indicator-syncthing
+	:alt: Documentation Build Status
 
-.. |docs_check| image:: https://github.com/domdfcoding/indicator-syncthing/workflows/Docs%20Check/badge.svg
-	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%22Docs+Check%22
+.. |docs_check| actions-shield::
+	:workflow: Docs Check
 	:alt: Docs Check Status
 
-.. |travis| image:: https://img.shields.io/travis/com/domdfcoding/indicator-syncthing/master?logo=travis
-	:target: https://travis-ci.com/domdfcoding/indicator-syncthing
-	:alt: Travis Build Status
+.. |travis| actions-shield::
+	:workflow: Linux Tests
+	:alt: Linux Test Status
 
-.. |requires| image:: https://requires.io/github/domdfcoding/indicator-syncthing/requirements.svg?branch=master
-	:target: https://requires.io/github/domdfcoding/indicator-syncthing/requirements/?branch=master
+.. |requires| requires-io-shield::
 	:alt: Requirements Status
 
-.. |codefactor| image:: https://img.shields.io/codefactor/grade/github/domdfcoding/indicator-syncthing?logo=codefactor
-	:target: https://www.codefactor.io/repository/github/domdfcoding/indicator-syncthing
+.. |codefactor| codefactor-shield::
 	:alt: CodeFactor Grade
 
-.. |pypi-version| image:: https://img.shields.io/pypi/v/indicator-syncthing
-	:target: https://pypi.org/project/indicator-syncthing/
+.. |pypi-version| pypi-shield::
+	:project: indicator-syncthing
+	:version:
 	:alt: PyPI - Package Version
 
-.. |supported-versions| image:: https://img.shields.io/pypi/pyversions/indicator-syncthing
-	:target: https://pypi.org/project/indicator-syncthing/
+.. |supported-versions| pypi-shield::
+	:project: indicator-syncthing
+	:py-versions:
 	:alt: PyPI - Supported Python Versions
 
-.. |supported-implementations| image:: https://img.shields.io/pypi/implementation/indicator-syncthing
-	:target: https://pypi.org/project/indicator-syncthing/
+.. |supported-implementations| pypi-shield::
+	:project: indicator-syncthing
+	:implementations:
 	:alt: PyPI - Supported Implementations
 
-.. |wheel| image:: https://img.shields.io/pypi/wheel/indicator-syncthing
-	:target: https://pypi.org/project/indicator-syncthing/
+.. |wheel| pypi-shield::
+	:project: indicator-syncthing
+	:wheel:
 	:alt: PyPI - Wheel
 
-.. |license| image:: https://img.shields.io/github/license/domdfcoding/indicator-syncthing
-	:target: https://github.com/domdfcoding/indicator-syncthing/blob/master/LICENSE
+.. |license| github-shield::
+	:license:
 	:alt: License
 
-.. |language| image:: https://img.shields.io/github/languages/top/domdfcoding/indicator-syncthing
+.. |language| github-shield::
+	:top-language:
 	:alt: GitHub top language
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/domdfcoding/indicator-syncthing/v0.1.0
-	:target: https://github.com/domdfcoding/indicator-syncthing/pulse
+.. |commits-since| github-shield::
+	:commits-since: v0.1.0
 	:alt: GitHub commits since tagged version
 
-.. |commits-latest| image:: https://img.shields.io/github/last-commit/domdfcoding/indicator-syncthing
-	:target: https://github.com/domdfcoding/indicator-syncthing/commit/master
+.. |commits-latest| github-shield::
+	:last-commit:
 	:alt: GitHub last commit
 
-.. |maintained| image:: https://img.shields.io/maintenance/yes/2020
+.. |maintained| maintained-shield:: 2020
 	:alt: Maintenance
+
+.. |pre_commit| pre-commit-shield::
+	:alt: pre-commit
+
+.. |pre_commit_ci| pre-commit-ci-shield::
+	:alt: pre-commit.ci status
 
 .. end shields
 
@@ -86,20 +95,9 @@ Installation
 
 .. start installation
 
-.. tabs::
-
-	.. tab:: from PyPI
-
-		.. prompt:: bash
-
-			python3 -m pip install indicator-syncthing --user
-
-
-	.. tab:: from GitHub
-
-		.. prompt:: bash
-
-			python3 -m pip install git+https://github.com/domdfcoding/indicator-syncthing@master --user
+.. installation:: indicator-syncthing
+	:pypi:
+	:github:
 
 .. end installation
 
