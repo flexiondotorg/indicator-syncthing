@@ -46,19 +46,12 @@ additional_ignore:
   - "*.desktop"
   - "*.deb"
 
-setup_pre:
-  - "# Create .desktop file"
-  - "with open(f'indicator-syncthing.desktop', 'w') as desktop:"
-  - "\tdesktop.write(f\"\"\"[Desktop Entry]"
-  - "Version={__version__}"
-  - "Name={modname}"
-  - "Comment={short_desc}"
-  - "Exec=indicator-syncthing"
-  - "Icon=syncthing"
-  - "Terminal=false"
-  - "Type=Application"
-  - "Categories=Utility;"
-  - "\"\"\")"
+desktopfile:
+  Exec: indicator-syncthing
+  Icon: syncthing
+  Terminal: false
+  Type: Application
+  Categories: Utility
 
 platforms:
   - "Linux"

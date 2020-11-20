@@ -9,22 +9,27 @@ from setuptools import setup
 
 sys.path.append('.')
 
+# stdlib
+from textwrap import dedent
+
 # this package
 from __pkginfo__ import *  # pylint: disable=wildcard-import
 
-# Create .desktop file
-with open(f'indicator-syncthing.desktop', 'w') as desktop:
+with open("indicator-syncthing.desktop", 'w') as desktop:
 	desktop.write(
-			f"""[Desktop Entry]
+			dedent(
+					f"""\
+[Desktop Entry]
 Version={__version__}
-Name={modname}
-Comment={short_desc}
+Name=indicator-syncthing
+Comment=A Syncthing status menu for Unity and other desktops that support AppIndicator.
 Exec=indicator-syncthing
 Icon=syncthing
-Terminal=false
+Terminal=False
 Type=Application
-Categories=Utility;
+Categories=Utility
 """
+					)
 			)
 
 setup(
