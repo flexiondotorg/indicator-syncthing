@@ -34,6 +34,8 @@ import signal
 # this package
 from indicator_syncthing import IndicatorSyncthing, get_lock
 
+__all__ = ["main"]
+
 
 def main():
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -53,21 +55,21 @@ def main():
 			"--timeout-event",
 			type=int,
 			default=10,
-			metavar="N",
+			metavar='N',
 			help="Interval for polling event interface, in seconds. Default: %(default)s"
 			)
 	parser.add_argument(
 			"--timeout-rest",
 			type=int,
 			default=30,
-			metavar="N",
+			metavar='N',
 			help="Interval for polling REST interface, in seconds. Default: %(default)s"
 			)
 	parser.add_argument(
 			"--timeout-gui",
 			type=int,
 			default=5,
-			metavar="N",
+			metavar='N',
 			help="Interval for refreshing GUI, in seconds. Default: %(default)s"
 			)
 	parser.add_argument(
@@ -85,7 +87,7 @@ def main():
 			"--nb-recent-files",
 			type=int,
 			default=20,
-			metavar="N",
+			metavar='N',
 			help="Number of recent files entries to keep. Default: %(default)s"
 			)
 

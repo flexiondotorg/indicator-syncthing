@@ -51,6 +51,8 @@ from gi.repository import Gio as gio
 from gi.repository import GLib as glib
 from gi.repository import Gtk as gtk
 
+__all__ = ["IndicatorSyncthing", "get_lock", "human_readable", "shorten_path"]
+
 __author__ = "Dominic Davis-Foster"
 __copyright__ = "2020 Dominic Davis-Foster"
 
@@ -67,7 +69,7 @@ def get_lock(process_name):
 	get_lock._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
 
 	try:
-		get_lock._lock_socket.bind("\0" + process_name)
+		get_lock._lock_socket.bind('\x00' + process_name)
 		print("Created lock for process:", process_name)
 	except OSError:
 		print("Lock exists. Process:", process_name, "is already running")
@@ -81,16 +83,16 @@ def shorten_path(text, maxlength=80):
 	if len(tail) > maxlength:
 		return tail[:maxlength]  # TODO: separate file extension
 	while len(head) + len(tail) > maxlength:
-		head = "/".join(head.split("/")[:-1])
-		if head == "":
+		head = '/'.join(head.split('/')[:-1])
+		if head == '':
 			return ".../" + tail
 	return head + "/.../" + tail
 
 
 def human_readable(size):
-	for unit in ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"]:
+	for unit in ['B', "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"]:
 		if abs(size) < 1024.0:
-			f = f"{size:.1f}".rstrip("0").rstrip(".")
+			f = f"{size:.1f}".rstrip('0').rstrip('.')
 			return f"{f} {unit}"
 		size = size / 1024.0
 	return f"{size:.1f} {'YiB'}"
@@ -133,9 +135,10 @@ class IndicatorSyncthing:
 
 		self.last_ping = None
 		self.system_status = {}
-		self.syncthing_base = "http://localhost:8080"
-		self.syncthing_version = ""
-		self.device_name = ""
+		# TODO: read syncthing config and parse from there
+		self.syncthing_base = "http://localhost:8384"
+		self.syncthing_version = ''
+		self.device_name = ''
 		self.last_seen_id = 0
 		self.timeout_counter = 0
 		self.count_connection_error = 0
@@ -300,9 +303,9 @@ class IndicatorSyncthing:
 					self.devices.append({
 							"id": elem.getAttribute("id"),
 							"name": elem.getAttribute("name"),
-							"state": "",
+							"state": '',
 							"connected": False,
-							"lastSeen": "",
+							"lastSeen": '',
 							})
 				elif elem.tagName == "folder":
 					self.folders.append({
@@ -349,7 +352,7 @@ class IndicatorSyncthing:
 		return False
 
 	def rest_get(self, rest_path):
-		params = ""
+		params = ''
 		if rest_path == "/rest/events":
 			params = {"since": self.last_seen_id}
 
@@ -448,7 +451,7 @@ class IndicatorSyncthing:
 			e = list(event["data"].values())
 			e = list(e[0].keys())[0]
 		except (ValueError, KeyError, IndexError):
-			e = ""
+			e = ''
 
 		log.debug(f"Download in progress: {e}")
 		for folder_name in list(event["data"].keys()):
@@ -505,7 +508,7 @@ class IndicatorSyncthing:
 				if event["data"]["completion"] < 100:
 					dev["state"] = "syncing"
 				else:
-					dev["state"] = ""
+					dev["state"] = ''
 		self.state["update_devices"] = True
 
 	def event_starting(self, event):
@@ -636,9 +639,9 @@ class IndicatorSyncthing:
 			newdevices.append({
 					"id": elem["deviceID"],
 					"name": elem["name"],
-					"state": "",
+					"state": '',
 					"connected": False,
-					"lastSeen": "",
+					"lastSeen": '',
 					})
 
 		self.folders = newfolders
@@ -767,11 +770,11 @@ class IndicatorSyncthing:
 				fj = json.dumps(f)
 				# mi = gtk.MenuItem(f"\u2193 [{f['folder']}] {shorten_path(f['file'])}")
 				mi = gtk.MenuItem(
-						"\u2193 [{}] {}{}".format(
+						"↓ [{}] {}{}".format(
 								f["folder"],
 								shorten_path(f["file"]),
 								self.downloading_files_extra[fj]["progress"] if fj in self.downloading_files_extra
-								and "progress" in self.downloading_files_extra[fj] else ""
+								and "progress" in self.downloading_files_extra[fj] else ''
 								)
 						)
 				self.current_files_submenu.append(mi)
@@ -791,8 +794,8 @@ class IndicatorSyncthing:
 			for child in self.recent_files_submenu.get_children():
 				self.recent_files_submenu.remove(child)
 			icons = {
-					"delete": "\u2612",  # [x]
-					"update": "\u2193",  # down arrow
+					"delete": '☒',  # [x]
+					"update": '↓',  # down arrow
 					"dir": "\u0001f4c1",  # folder
 					"file": "\u0001f4c4",  # file
 					}
@@ -820,7 +823,7 @@ class IndicatorSyncthing:
 						folder_maxlength = max(folder_maxlength, len(elm["id"]))
 						if folder_maxlength < max(folder_maxlength, len(elm["label"])):
 							folder_maxlength = max(folder_maxlength, len(elm["label"]))
-						if str(mi.get_label()).split(" ", 1)[0] == elm["id"]:
+						if str(mi.get_label()).split(' ', 1)[0] == elm["id"]:
 							if elm["state"] == "scanning":
 								# mi.set_label(f"{elm['id']} (scanning)")
 								mi.set_label(f"{elm['id'] or elm['label']} (scanning)")
@@ -885,7 +888,7 @@ class IndicatorSyncthing:
 			self.mi_shutdown_syncthing.set_sensitive(False)
 
 	def count_connected(self):
-		return len([e for e in self.devices if e['connected']])
+		return len([e for e in self.devices if e["connected"]])
 
 	def syncthing_start(self, *_):
 		self.mi_start_syncthing.set_sensitive(False)
@@ -1035,7 +1038,7 @@ class IndicatorSyncthing:
 
 	def get_full_path(self, folder, item):
 		for elem in self.folders:
-			a = ""
+			a = ''
 			if elem["id"] == folder:
 				a = elem["path"]
 		return os.path.join(a, item)
