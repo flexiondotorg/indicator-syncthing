@@ -33,11 +33,12 @@ import socket  # used only to catch exceptions
 import subprocess
 import time
 import webbrowser as wb
+from typing import no_type_check
 from urllib.parse import urljoin, urlparse
 from xml.dom import minidom
 
 # 3rd party
-import gi  # type: ignore
+import gi
 import requests  # used only to catch exceptions
 from dateutil.parser import parse
 from requests_futures.sessions import FuturesSession  # type: ignore
@@ -66,10 +67,10 @@ APPINDICATOR_ID = "indicator-syncthing"
 def get_lock(process_name):
 	# Without holding a reference to our socket somewhere it gets garbage
 	# collected when the function exits
-	get_lock._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+	get_lock._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)  # type: ignore
 
 	try:
-		get_lock._lock_socket.bind('\x00' + process_name)
+		get_lock._lock_socket.bind('\x00' + process_name)  # type: ignore
 		print("Created lock for process:", process_name)
 	except OSError:
 		print("Lock exists. Process:", process_name, "is already running")
@@ -147,6 +148,7 @@ class IndicatorSyncthing:
 
 		glib.idle_add(self.load_config_begin)
 
+	@no_type_check
 	def create_menu(self):
 		self.menu = gtk.Menu()
 
@@ -656,6 +658,7 @@ class IndicatorSyncthing:
 		# TODO: check status of global announce
 		self.state["update_st_running"] = True
 
+	@no_type_check
 	def process_rest_system_upgrade(self, data):
 		self.syncthing_version = data["running"]
 		if data["newer"]:
@@ -690,10 +693,10 @@ class IndicatorSyncthing:
 		self.errors = data["errors"]
 		if self.errors:
 			log.info(f"{data['errors']}")
-			self.mi_errors.show()
+			self.mi_errors.show()  # type: ignore
 			self.set_state("error")
 		else:
-			self.mi_errors.hide()
+			self.mi_errors.hide()  # type: ignore
 
 	# end of the REST processing functions
 
@@ -713,6 +716,7 @@ class IndicatorSyncthing:
 		if lsi > self.last_seen_id:
 			self.last_seen_id = lsi
 
+	@no_type_check
 	def update_devices(self):
 		self.state["update_devices"] = False
 		if not self.devices:
@@ -754,6 +758,7 @@ class IndicatorSyncthing:
 
 					mi.set_sensitive(dev["connected"])
 
+	@no_type_check
 	def update_files(self):
 		self.current_files_menu.set_label(f"Downloading {len(self.downloading_files)} files")
 
@@ -813,6 +818,7 @@ class IndicatorSyncthing:
 			self.recent_files_menu.show()
 		self.state["update_files"] = False
 
+	@no_type_check
 	def update_folders(self):
 		if self.folders:
 			self.folder_menu.set_sensitive(True)
@@ -861,6 +867,7 @@ class IndicatorSyncthing:
 			self.folder_menu.set_sensitive(False)
 		self.state["update_folders"] = False
 
+	@no_type_check
 	def update_st_running(self):
 		if self.current_action[0]:
 			pass
@@ -890,6 +897,7 @@ class IndicatorSyncthing:
 	def count_connected(self):
 		return len([e for e in self.devices if e["connected"]])
 
+	@no_type_check
 	def syncthing_start(self, *_):
 		self.mi_start_syncthing.set_sensitive(False)
 		self.mi_restart_syncthing.set_sensitive(False)
@@ -906,6 +914,7 @@ class IndicatorSyncthing:
 			return
 		self.state["update_st_running"] = True
 
+	@no_type_check
 	def syncthing_restart(self, *_):
 		self.mi_start_syncthing.set_sensitive(False)
 		self.mi_restart_syncthing.set_sensitive(False)
@@ -918,6 +927,7 @@ class IndicatorSyncthing:
 		self.set_state("paused")
 		self.state["update_st_running"] = True
 
+	@no_type_check
 	def syncthing_shutdown(self, *_):
 		self.mi_start_syncthing.set_sensitive(False)
 		self.mi_restart_syncthing.set_sensitive(False)
@@ -942,6 +952,7 @@ class IndicatorSyncthing:
 			lic = f.read()
 		return lic
 
+	@no_type_check
 	def show_about(self, _):
 		dialog = gtk.AboutDialog()
 		dialog.set_default_icon_from_file(os.path.join(self.icon_path, "icon.png"))
@@ -980,6 +991,7 @@ class IndicatorSyncthing:
 		else:
 			return "idle"
 
+	@no_type_check
 	def set_icon(self):
 		icon = {
 				"updating": {"name": "syncthing-client-updating", "descr": "Updating"},
