@@ -43,7 +43,7 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 	:alt: Docs Check Status
 
 .. |travis| image:: https://github.com/domdfcoding/indicator-syncthing/workflows/Linux%20Tests/badge.svg
-	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%Linux+Tests%22
+	:target: https://github.com/domdfcoding/indicator-syncthing/actions?query=workflow%3A%22Linux+Tests%22
 	:alt: Linux Test Status
 
 .. |requires| image:: https://requires.io/github/domdfcoding/indicator-syncthing/requirements.svg?branch=master
