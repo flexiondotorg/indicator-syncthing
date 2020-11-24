@@ -61,9 +61,3 @@ travis_extra_install_pre:
   - sudo apt install libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
 
 travis_ubuntu_version: bionic
-
-mypy_deps:
-  - PyGObject-stubs
-
-travis_additional_requirements:
-  - libgirepository1.0-dev
