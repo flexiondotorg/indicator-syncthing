@@ -354,9 +354,10 @@ class IndicatorSyncthing:
 		return False
 
 	def rest_get(self, rest_path):
-		params = ''
 		if rest_path == "/rest/events":
 			params = {"since": self.last_seen_id}
+		else:
+			params = {}
 
 		log.info(f"rest_get: {rest_path} {params}")
 		headers = {"X-API-Key": self.api_key}
@@ -450,8 +451,7 @@ class IndicatorSyncthing:
 
 	def event_downloadprogress(self, event):
 		try:
-			e = list(event["data"].values())
-			e = list(e[0].keys())[0]
+			e = list(list(event["data"].values())[0].keys())[0]
 		except (ValueError, KeyError, IndexError):
 			e = ''
 
@@ -523,7 +523,7 @@ class IndicatorSyncthing:
 	def event_startupcomplete(self, event):
 		self.set_state("idle")
 		log.info(f"Syncthing startup complete at: {self.convert_time(event['time'])}")
-		if event["data"] is None:
+		if event["data"] is not None:
 			self.system_status["myID"] = event["data"].get("myID")
 		log.info(f"myID: {self.system_status.get('myID')}")
 
