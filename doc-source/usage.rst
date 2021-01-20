@@ -1,5 +1,0 @@
-==========
-Usage
-==========
-
-.. TODO:: This section

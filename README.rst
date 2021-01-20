@@ -23,8 +23,6 @@ This is a fork of Stuart Langridge's syncthing-ubuntu-indicator_.
 	:stub-columns: 1
 	:widths: 10 90
 
-	* - Docs
-	  - |docs| |docs_check|
 	* - Tests
 	  - |travis| |codefactor| |pre_commit_ci|
 	* - PyPI

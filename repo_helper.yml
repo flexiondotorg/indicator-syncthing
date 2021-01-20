@@ -10,6 +10,7 @@ short_desc: 'A Syncthing status menu for Unity and other desktops that support A
 
 enable_conda: False
 enable_tests: False
+enable_docs: False
 
 console_scripts:
   - "indicator_syncthing = indicator_syncthing.__main__:main"
@@ -23,17 +24,12 @@ python_versions:
   - '3.7'
   - '3.8'
 
-# travis secure password for PyPI
-
 # additional lines for MANIFEST.in
 manifest_additional:
   - "recursive-include indicator_syncthing/icons *"
 
 classifiers:
   - 'Development Status :: 4 - Beta'
-  #  - "Development Status :: 5 - Production/Stable"
-#  - "Development Status :: 6 - Mature"
-#  - "Development Status :: 7 - Inactive"
   - 'Intended Audience :: End Users/Desktop'
   - 'Operating System :: POSIX :: Linux'
   - 'Topic :: Utilities'
@@ -60,9 +56,6 @@ travis_extra_install_pre:
   - sudo apt install libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
 
 travis_ubuntu_version: bionic
-
-exclude_files:
-  - docs_action
 
 sphinx_html_theme: furo
 standalone_contrib_guide: true
