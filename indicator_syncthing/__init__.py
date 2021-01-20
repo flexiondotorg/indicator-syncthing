@@ -39,18 +39,21 @@ from xml.dom import minidom
 
 # 3rd party
 import gi
-import requests  # used only to catch exceptions
+import requests
 from dateutil.parser import parse
 from requests_futures.sessions import FuturesSession  # type: ignore
+
+# this package
+from indicator_syncthing.utils import get_lock, get_port, human_readable, shorten_path
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("AppIndicator3", "0.1")
 
 # 3rd party
-from gi.repository import AppIndicator3 as appindicator  # type: ignore
-from gi.repository import Gio as gio
-from gi.repository import GLib as glib
-from gi.repository import Gtk as gtk
+from gi.repository import AppIndicator3 as appindicator  # type: ignore  # noqa: E402
+from gi.repository import Gio as gio  # noqa: E402
+from gi.repository import GLib as glib  # noqa: E402
+from gi.repository import Gtk as gtk  # noqa: E402
 
 __all__ = ["IndicatorSyncthing", "get_lock", "human_readable", "shorten_path"]
 
@@ -58,48 +61,16 @@ __author__ = "Dominic Davis-Foster"
 __copyright__ = "2020 Dominic Davis-Foster"
 
 __license__ = "Apache Software License"
-__version__ = VERSION = "0.1.0"
+__version__ = "0.1.0"
 __email__ = "dominic@davis-foster.co.uk"
 
 APPINDICATOR_ID = "indicator-syncthing"
 
 
-def get_lock(process_name):
-	# Without holding a reference to our socket somewhere it gets garbage
-	# collected when the function exits
-	get_lock._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)  # type: ignore
-
-	try:
-		get_lock._lock_socket.bind('\x00' + process_name)  # type: ignore
-		print("Created lock for process:", process_name)
-	except OSError:
-		print("Lock exists. Process:", process_name, "is already running")
-		exit()
-
-
-def shorten_path(text, maxlength=80):
-	if len(text) <= maxlength:
-		return text
-	head, tail = os.path.split(text)
-	if len(tail) > maxlength:
-		return tail[:maxlength]  # TODO: separate file extension
-	while len(head) + len(tail) > maxlength:
-		head = '/'.join(head.split('/')[:-1])
-		if head == '':
-			return ".../" + tail
-	return head + "/.../" + tail
-
-
-def human_readable(size):
-	for unit in ['B', "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"]:
-		if abs(size) < 1024.0:
-			f = f"{size:.1f}".rstrip('0').rstrip('.')
-			return f"{f} {unit}"
-		size = size / 1024.0
-	return f"{size:.1f} {'YiB'}"
-
-
 class IndicatorSyncthing:
+	"""
+	The main application class.
+	"""
 
 	def __init__(self, args):
 		log.info("Started main procedure")
@@ -137,7 +108,7 @@ class IndicatorSyncthing:
 		self.last_ping = None
 		self.system_status = {}
 		# TODO: read syncthing config and parse from there
-		self.syncthing_base = "http://localhost:8384"
+		self.syncthing_base = f"http://localhost:{get_port()}"
 		self.syncthing_version = ''
 		self.device_name = ''
 		self.last_seen_id = 0
@@ -149,7 +120,7 @@ class IndicatorSyncthing:
 		glib.idle_add(self.load_config_begin)
 
 	@no_type_check
-	def create_menu(self):
+	def create_menu(self) -> None:  # noqa: D102:
 		self.menu = gtk.Menu()
 
 		self.title_menu = gtk.MenuItem("Syncthing")
@@ -250,23 +221,28 @@ class IndicatorSyncthing:
 		self.quit_button.connect("activate", self.quit)
 		self.quit_button.show()
 		self.more_submenu.append(self.quit_button)
+
 		if not self.args.text_only:
 			self.ind.set_menu(self.menu)
 
-	def load_config_begin(self):
+	def load_config_begin(self) -> bool:  # noqa: D102:
 		# Read needed values from config file
 		confdir = glib.get_user_config_dir()
+
 		if not confdir:
 			confdir = os.path.expanduser("~/.config")
+
 		conffile = os.path.join(confdir, "syncthing", "config.xml")
+
 		if not os.path.isfile(conffile):
 			log.error(f"Couldn't find config file: {conffile}")
 			self.quit()
+
 		f = gio.file_new_for_path(conffile)
 		f.load_contents_async(None, self.load_config_finish)
 		return False
 
-	def load_config_finish(self, fp, async_result):
+	def load_config_finish(self, fp, async_result) -> None:  # noqa: D102:
 		try:
 			success, data, etag = fp.load_contents_finish(async_result)
 
@@ -295,6 +271,7 @@ class IndicatorSyncthing:
 				raise Exception("No apikey element in config")
 			if not api_key[0].hasChildNodes():
 				raise Exception("No apikey specified in config, please create one via the web interface")
+
 			self.api_key = api_key[0].firstChild.nodeValue
 
 			# Read folders and devices from config
@@ -316,10 +293,13 @@ class IndicatorSyncthing:
 							"path": elem.getAttribute("path"),
 							"state": "unknown",
 							})
+
 			if not self.devices:
 				raise Exception("No devices in config")
+
 			if not self.folders:
 				raise Exception("No folders in config")
+
 		except Exception as e:
 			log.error(f"Error parsing config file: {e}")
 			self.quit()
@@ -335,25 +315,28 @@ class IndicatorSyncthing:
 		glib.timeout_add_seconds(self.args.timeout_rest, self.timeout_rest)
 		glib.timeout_add_seconds(self.args.timeout_event, self.timeout_events)
 
-	def syncthing_url(self, url):
-		# Creates a url from given values and the address read from file
+	def syncthing_url(self, url) -> str:
+		"""
+		Constructs a url from the given values and the address read from the config file.
+		"""
 		return urljoin(self.syncthing_base, url)
 
-	def open_web_ui(self, *_):
+	def open_web_ui(self, *_) -> None:  # noqa: D102:
 		wb.open(self.syncthing_url(''))
 
 	@staticmethod
-	def open_releases_page(*_):
+	def open_releases_page(*_) -> None:  # noqa: D102:
 		wb.open("https://github.com/syncthing/syncthing/releases")
 
-	def rest_post(self, rest_path):
+	def rest_post(self, rest_path) -> bool:  # noqa: D102:
 		log.debug(f"rest_post: {rest_path}")
 		headers = {"X-API-Key": self.api_key}
 		if rest_path in ["/rest/system/restart", "/rest/system/shutdown"]:
-			f = self.session.post(self.syncthing_url(rest_path), headers=headers)
+			self.session.post(self.syncthing_url(rest_path), headers=headers)
+
 		return False
 
-	def rest_get(self, rest_path):
+	def rest_get(self, rest_path) -> bool:  # noqa: D102:
 		if rest_path == "/rest/events":
 			params = {"since": self.last_seen_id}
 		else:
@@ -371,7 +354,7 @@ class IndicatorSyncthing:
 		f.add_done_callback(self.rest_receive_data)
 		return False
 
-	def rest_receive_data(self, future):
+	def rest_receive_data(self, future) -> None:  # noqa: D102:
 		try:
 			r = future.result()
 		except requests.exceptions.ConnectionError:
@@ -395,6 +378,7 @@ class IndicatorSyncthing:
 
 		rest_path = urlparse(r.url).path
 		rest_query = urlparse(r.url).query
+
 		if r.status_code != 200:
 			log.warning(f"rest_receive_data: {rest_path} failed ({r.status_code})")
 			if rest_path == "/rest/system/upgrade":
@@ -409,7 +393,7 @@ class IndicatorSyncthing:
 
 		try:
 			json_data = r.json()
-		except:
+		except Exception:
 			log.warning("rest_receive_data: Cannot process REST data")
 			self.set_state("error")
 			return
@@ -419,8 +403,10 @@ class IndicatorSyncthing:
 		if self.current_action[0]:
 			self.current_action = (None, None)
 			self.state["update_st_running"] = True
+
 		self.set_state("idle")  # TODO: fix this
 		log.debug(f"rest_receive_data: {rest_path} {rest_query}")
+
 		if rest_path == "/rest/events":
 			try:
 				for qitem in json_data:
@@ -430,14 +416,15 @@ class IndicatorSyncthing:
 				log.debug(f"qitem: {qitem}")
 				self.set_state("error")
 		else:
-			fn = getattr(self, f"process_{rest_path.strip('/').replace('/', '_')}")(json_data)
+			getattr(self, f"process_{rest_path.strip('/').replace('/', '_')}")(json_data)
 
 	# Processing of the events coming from the event interface
-	def process_event(self, event):
+	def process_event(self, event) -> None:  # noqa: D102:
 		if self.args.log_events:
 			log.debug(f"EVENT: {event['type']}: {json.dumps(event)}")
 
 		t = event.get("type").lower()
+
 		# log.debug("received event: "+str(event))
 		if hasattr(self, f"event_{t}"):
 			log.debug(f"Received event: {event.get('id')} {event.get('type')}")
@@ -446,10 +433,10 @@ class IndicatorSyncthing:
 			log.debug(f"Ignoring event: {event.get('id')} {event.get('type')}")
 
 		# log.debug(json.dumps(event, indent=4))
-		fn = getattr(self, f"event_{t}", self.event_unknown_event)(event)
+		getattr(self, f"event_{t}", self.event_unknown_event)(event)
 		self.update_last_seen_id(event.get("id", 0))
 
-	def event_downloadprogress(self, event):
+	def event_downloadprogress(self, event) -> None:  # noqa: D102:
 		try:
 			e = list(list(event["data"].values())[0].keys())[0]
 		except (ValueError, KeyError, IndexError):
@@ -477,6 +464,7 @@ class IndicatorSyncthing:
 					pct = 0.0
 				else:
 					pct = 100 * file["bytesDone"] / file["bytesTotal"]
+
 				# TODO: convert bytes to kb, mb etc
 				v["progress"] = f"({file['bytesDone']}/{file['bytesTotal']}) - {pct:.2f}%"
 				if must_be_added:
@@ -485,82 +473,94 @@ class IndicatorSyncthing:
 			for elm in self.folders:
 				if elm["id"] == folder_name:
 					elm["state"] = "syncing"
+
 			# TODO: this is slow!
 		self.state["update_files"] = True
 
-	def event_unknown_event(self, event):
+	def event_unknown_event(self, event) -> None:  # noqa: D102:
 		pass
 
-	def event_statechanged(self, event):
+	def event_statechanged(self, event) -> None:  # noqa: D102:
 		for elem in self.folders:
 			if elem["id"] == event["data"]["folder"]:
 				elem["state"] = event["data"]["to"]
+
 		self.state["update_folders"] = True
 		self.set_state()
 
-	def event_foldersummary(self, event):
+	def event_foldersummary(self, event) -> None:  # noqa: D102:
 		for elem in self.folders:
 			if elem["id"] == event["data"]["folder"]:
 				elem.update(event["data"]["summary"])
+
 		self.state["update_folders"] = True
 
-	def event_foldercompletion(self, event):
+	def event_foldercompletion(self, event) -> None:  # noqa: D102:
 		for dev in self.devices:
 			if dev["id"] == event["data"]["device"]:
 				if event["data"]["completion"] < 100:
 					dev["state"] = "syncing"
 				else:
 					dev["state"] = ''
+
 		self.state["update_devices"] = True
 
-	def event_starting(self, event):
+	def event_starting(self, event) -> None:  # noqa: D102:
 		self.set_state("paused")
 		log.info(f"Received that Syncthing was starting at: {event['time']}")
 		# Check for added/removed devices or folders.
 		glib.idle_add(self.rest_get, "/rest/system/config")
 		glib.idle_add(self.rest_get, "/rest/system/version")
 
-	def event_startupcomplete(self, event):
+	def event_startupcomplete(self, event) -> None:  # noqa: D102:
 		self.set_state("idle")
+
 		log.info(f"Syncthing startup complete at: {self.convert_time(event['time'])}")
+
 		if event["data"] is not None:
 			self.system_status["myID"] = event["data"].get("myID")
+
 		log.info(f"myID: {self.system_status.get('myID')}")
 
-	def event_ping(self, event):
+	def event_ping(self, event) -> None:  # noqa: D102:
 		self.last_ping = parse(event["time"])
 
-	def event_devicediscovered(self, event):
+	def event_devicediscovered(self, event) -> None:  # noqa: D102:
 		found = False
+
 		for elm in self.devices:
 			if elm["id"] == event["data"]["device"]:
 				elm["state"] = "discovered"
 				found = True
+
 		if not found:
-			log.warn("Unknown device discovered")
+			log.warning("Unknown device discovered")
 			self.devices.append({
 					"id": event["data"]["device"],
 					"name": "new unknown device",
 					"address": event["data"]["addrs"],
 					"state": "unknown",
 					})
+
 		self.state["update_devices"] = True
 
-	def event_deviceconnected(self, event):
+	def event_deviceconnected(self, event) -> None:  # noqa: D102:
 		for dev in self.devices:
 			if event["data"]["id"] == dev["id"]:
 				dev["connected"] = True
 				log.info(f"Device connected: {dev['name']}")
+
 		self.state["update_devices"] = True
 
-	def event_devicedisconnected(self, event):
+	def event_devicedisconnected(self, event) -> None:  # noqa: D102:
 		for dev in self.devices:
 			if event["data"]["id"] == dev["id"]:
 				dev["connected"] = False
 				log.info(f"Device disconnected: {dev['name']}")
+
 		self.state["update_devices"] = True
 
-	def event_itemstarted(self, event):
+	def event_itemstarted(self, event) -> None:  # noqa: D102:
 		log.debug(f"Item started: {event['data']['item']}")
 		file_details = {
 				"folder": event["data"]["folder"],
@@ -578,10 +578,11 @@ class IndicatorSyncthing:
 		for elm in self.folders:
 			if elm["id"] == event["data"]["folder"]:
 				elm["state"] = "syncing"
+
 		self.set_state()
 		self.state["update_files"] = True
 
-	def event_itemfinished(self, event):
+	def event_itemfinished(self, event) -> None:  # noqa: D102:
 		# TODO: test whether "error" is null
 		log.debug(f"Item finished: {event['data']['item']}")
 		file_details = {
@@ -616,14 +617,15 @@ class IndicatorSyncthing:
 	# End of event processing
 
 	# Begin REST processing functions
-	def process_rest_system_connections(self, data):
+	def process_rest_system_connections(self, data) -> None:  # noqa: D102:
 		for elem in data["connections"]:
 			for dev in self.devices:
 				if dev["id"] == elem:
 					dev["connected"] = True
+
 		self.state["update_devices"] = True
 
-	def process_rest_system_config(self, data):
+	def process_rest_system_config(self, data) -> None:  # noqa: D102:
 		log.info("Processing: /rest/system/config")
 		self.api_key = data["gui"]["apiKey"]
 
@@ -649,47 +651,50 @@ class IndicatorSyncthing:
 		self.folders = newfolders
 		self.devices = newdevices
 
-	def process_rest_system_status(self, data):
+	def process_rest_system_status(self, data) -> None:  # noqa: D102:
 		if data["uptime"] < self.system_status.get("uptime", 0):
 			# Means that Syncthing restarted
 			self.last_seen_id = 0
 			glib.idle_add(self.rest_get, "/rest/system/version")
+
 		self.system_status = data
 		# TODO: check status of global announce
 		self.state["update_st_running"] = True
 
 	@no_type_check
-	def process_rest_system_upgrade(self, data):
+	def process_rest_system_upgrade(self, data) -> None:  # noqa: D102:
 		self.syncthing_version = data["running"]
+
 		if data["newer"]:
 			self.syncthing_upgrade_menu.set_label(f"New version available: {data['latest']}")
 			self.syncthing_upgrade_menu.show()
 		else:
 			self.syncthing_upgrade_menu.hide()
+
 		self.state["update_st_running"] = True
 
-	def process_rest_system_version(self, data):
+	def process_rest_system_version(self, data) -> None:  # noqa: D102:
 		self.syncthing_version = data["version"]
 		self.state["update_st_running"] = True
 
-	def process_rest_system_ping(self, data):
+	def process_rest_system_ping(self, data) -> None:  # noqa: D102:
 		if data["ping"] == "pong":
 			log.info(f"Connected to Syncthing REST interface at {self.syncthing_url('')}")
 
-	def process_rest_ping(self, data):
+	def process_rest_ping(self, data) -> None:  # noqa: D102:
 		if data["ping"] == "pong":
 			# Basic version check
 			log.error("Detected running Syncthing version < v0.11")
 			log.error("Syncthing v0.11 (or higher) required. Exiting.")
 			self.quit()
 
-	def process_rest_stats_device(self, data):
+	def process_rest_stats_device(self, data) -> None:  # noqa: D102:
 		for item in data:
 			for dev in self.devices:
 				if dev["id"] == item:
 					dev["lastSeen"] = data[item]["lastSeen"]
 
-	def process_rest_system_error(self, data):
+	def process_rest_system_error(self, data) -> None:  # noqa: D102:
 		self.errors = data["errors"]
 		if self.errors:
 			log.info(f"{data['errors']}")
@@ -700,24 +705,25 @@ class IndicatorSyncthing:
 
 	# end of the REST processing functions
 
-	def update(self):
+	def update(self) -> bool:  # noqa: D102:
 		for func in self.state:
 			if self.state[func]:
 				log.debug(f"self.update {func}")
 				start = getattr(self, "%s" % func)()
+
 		return True
 
-	def update_last_checked(self, isotime):
+	def update_last_checked(self, isotime) -> None:  # noqa: D102:
 		# dt = parse(isotime)
 		# self.last_checked_menu.set_label("Last checked: %s" % (dt.strftime("%H:%M"),))
 		pass
 
-	def update_last_seen_id(self, lsi):
+	def update_last_seen_id(self, lsi) -> None:  # noqa: D102:
 		if lsi > self.last_seen_id:
 			self.last_seen_id = lsi
 
 	@no_type_check
-	def update_devices(self):
+	def update_devices(self) -> None:  # noqa: D102:
 		self.state["update_devices"] = False
 		if not self.devices:
 			self.devices_menu.set_label("No devices")
@@ -759,7 +765,7 @@ class IndicatorSyncthing:
 					mi.set_sensitive(dev["connected"])
 
 	@no_type_check
-	def update_files(self):
+	def update_files(self) -> None:  # noqa: D102:
 		self.current_files_menu.set_label(f"Downloading {len(self.downloading_files)} files")
 
 		if not self.downloading_files:
@@ -809,20 +815,24 @@ class IndicatorSyncthing:
 						f"{icons.get(f['action'], 'unknown')} {self.convert_time(f['time'])} [{f['folder']}] {shorten_path(f['file'])}"
 						)
 				self.recent_files_submenu.append(mi)
+
 				mi.connect(
 						"activate",
 						self.open_file_browser,
 						os.path.split(self.get_full_path(f["folder"], f["file"]))[0]
 						)
 				mi.show()
+
 			self.recent_files_menu.show()
+
 		self.state["update_files"] = False
 
 	@no_type_check
-	def update_folders(self):
+	def update_folders(self) -> None:  # noqa: D102:
 		if self.folders:
 			self.folder_menu.set_sensitive(True)
 			folder_maxlength = 0
+
 			if len(self.folders) == len(self.folder_menu_submenu):
 				for mi in self.folder_menu_submenu:
 					for elm in self.folders:
@@ -840,6 +850,7 @@ class IndicatorSyncthing:
 									lbltext = "{fid} (syncing {num} file, {bytes})"
 								else:
 									lbltext = "{fid} (syncing)"
+
 								mi.set_label(
 										lbltext.format(
 												# fid=elm["id"], num=elm.get("needFiles"),
@@ -865,12 +876,14 @@ class IndicatorSyncthing:
 					mi.show()
 		else:
 			self.folder_menu.set_sensitive(False)
+
 		self.state["update_folders"] = False
 
 	@no_type_check
-	def update_st_running(self):
+	def update_st_running(self) -> None:  # noqa: D102:
 		if self.current_action[0]:
 			pass
+
 		elif self.count_connection_error <= 1:
 			if self.syncthing_version and self.device_name:
 				self.title_menu.set_label(f"Syncthing {self.syncthing_version} \u2022 {self.device_name}")
@@ -879,6 +892,7 @@ class IndicatorSyncthing:
 			self.mi_start_syncthing.set_sensitive(False)
 			self.mi_restart_syncthing.set_sensitive(True)
 			self.mi_shutdown_syncthing.set_sensitive(True)
+
 		else:
 			self.title_menu.set_label("Syncthing is not running")
 			for dev in self.devices:
@@ -894,11 +908,11 @@ class IndicatorSyncthing:
 			self.mi_restart_syncthing.set_sensitive(False)
 			self.mi_shutdown_syncthing.set_sensitive(False)
 
-	def count_connected(self):
+	def count_connected(self) -> int:  # noqa: D102:
 		return len([e for e in self.devices if e["connected"]])
 
 	@no_type_check
-	def syncthing_start(self, *_):
+	def syncthing_start(self, *_) -> None:  # noqa: D102:
 		self.mi_start_syncthing.set_sensitive(False)
 		self.mi_restart_syncthing.set_sensitive(False)
 		self.mi_shutdown_syncthing.set_sensitive(False)
@@ -912,10 +926,11 @@ class IndicatorSyncthing:
 		except Exception as e:
 			log.error(f"Couldn't run syncthing: {e}")
 			return
+
 		self.state["update_st_running"] = True
 
 	@no_type_check
-	def syncthing_restart(self, *_):
+	def syncthing_restart(self, *_) -> None:  # noqa: D102:
 		self.mi_start_syncthing.set_sensitive(False)
 		self.mi_restart_syncthing.set_sensitive(False)
 		self.mi_shutdown_syncthing.set_sensitive(False)
@@ -928,7 +943,7 @@ class IndicatorSyncthing:
 		self.state["update_st_running"] = True
 
 	@no_type_check
-	def syncthing_shutdown(self, *_):
+	def syncthing_shutdown(self, *_) -> None:  # noqa: D102:
 		self.mi_start_syncthing.set_sensitive(False)
 		self.mi_restart_syncthing.set_sensitive(False)
 		self.mi_shutdown_syncthing.set_sensitive(False)
@@ -940,34 +955,39 @@ class IndicatorSyncthing:
 		self.set_state("paused")
 		self.state["update_st_running"] = True
 
-	def convert_time(self, t):
+	def convert_time(self, t):  # noqa: D102
 		return parse(t).strftime(self.args.timeformat)
 
 	@staticmethod
-	def calc_speed(old, new):
+	def calc_speed(old, new):  # noqa: D102
 		return old / (new * 10)
 
-	def license(self):
-		with open(os.path.join(self.wd, "LICENSE")) as f:
-			lic = f.read()
-		return lic
+	def get_license(self) -> str:  # noqa: D102:
+		# TODO:
+		# with open(os.path.join(self.wd, "LICENSE")) as f:
+		# 	lic = f.read()
+		# return lic
+		return "Apache 2.0"
 
 	@no_type_check
-	def show_about(self, _):
+	def show_about(self, _) -> None:  # noqa: D102:
 		dialog = gtk.AboutDialog()
 		dialog.set_default_icon_from_file(os.path.join(self.icon_path, "icon.png"))
 		dialog.set_logo(None)
 		dialog.set_program_name("Indicator Syncthing")
-		dialog.set_version(VERSION)
-		dialog.set_website("https://github.com/vincent-t/indicator-syncthing")
+		dialog.set_version(__version__)
+		dialog.set_website("https://github.com/domdfcoding/indicator-syncthing")
 		dialog.set_comments(
-				"This menu applet for systems supporting AppIndicator\ncan show the status of a Syncthing instance"
+				'\n'.join([
+						"This menu applet for systems supporting AppIndicator",
+						"can show the status of a Syncthing instance",
+						])
 				)
-		dialog.set_license(self.license())
+		dialog.set_license(self.get_license())
 		dialog.run()
 		dialog.destroy()
 
-	def set_state(self, s=None):
+	def set_state(self, s=None) -> None:  # noqa: D102:
 		if not s:
 			s = self.state["set_icon"]
 
@@ -978,8 +998,9 @@ class IndicatorSyncthing:
 		else:
 			self.state["set_icon"] = self.folder_check_state()
 
-	def folder_check_state(self):
+	def folder_check_state(self) -> str:  # noqa: D102:
 		state = {"syncing": 0, "idle": 0, "cleaning": 0, "scanning": 0, "unknown": 0}
+
 		for elem in self.folders:
 			if elem["state"] in state:
 				state[elem["state"]] += 1
@@ -992,7 +1013,7 @@ class IndicatorSyncthing:
 			return "idle"
 
 	@no_type_check
-	def set_icon(self):
+	def set_icon(self) -> None:  # noqa: D102
 		icon = {
 				"updating": {"name": "syncthing-client-updating", "descr": "Updating"},
 				"idle": {"name": "syncthing-client-idle", "descr": "Nothing to do"},
@@ -1008,16 +1029,17 @@ class IndicatorSyncthing:
 			self.ind.set_icon_full(icon[self.state["set_icon"]]["name"], icon[self.state["set_icon"]]["descr"])
 
 	@staticmethod
-	def run():
+	def run() -> None:  # noqa: D102
 		gtk.main()
 
-	@staticmethod
-	def quit(*_):
+	@staticmethod  # noqa: A003
+	def quit(*_) -> None:  # noqa: A003,D102
 		log.shutdown()
 		gtk.main_quit()
 
-	def timeout_rest(self):
+	def timeout_rest(self) -> bool:  # noqa: D102
 		self.timeout_counter = (self.timeout_counter + 1) % 10
+
 		if self.count_connection_error <= 1:
 			glib.idle_add(self.rest_get, "/rest/system/connections")
 			glib.idle_add(self.rest_get, "/rest/system/status")
@@ -1028,29 +1050,34 @@ class IndicatorSyncthing:
 				glib.idle_add(self.rest_get, "/rest/system/version")
 		else:
 			glib.idle_add(self.rest_get, "/rest/system/status")
+
 		if self.current_action in ["syncthing_start", "syncthing_restart"]:
 			glib.idle_add(self.rest_get, "/rest/system/upgrade")
 			glib.idle_add(self.rest_get, "/rest/system/version")
+
 		return True
 
-	def timeout_events(self):
+	def timeout_events(self) -> bool:  # noqa: D102
 		if self.count_connection_error == 0:
 			glib.idle_add(self.rest_get, "/rest/events")
+
 		return True
 
 	@staticmethod
-	def open_file_browser(menuitem, path):
+	def open_file_browser(menuitem, path) -> None:  # noqa: D102
 		if not os.path.isdir(path):
 			log.debug(f"Not a directory, or does not exist: {path}")
 			return
+
 		try:
 			subprocess.run(["xdg-open", path], check=True)
 		except Exception as e:
 			log.error(f"Couldn't open file browser for: {path} ({e})")
 
-	def get_full_path(self, folder, item):
+	def get_full_path(self, folder, item):  # noqa: D102
 		for elem in self.folders:
 			a = ''
 			if elem["id"] == folder:
 				a = elem["path"]
+
 		return os.path.join(a, item)

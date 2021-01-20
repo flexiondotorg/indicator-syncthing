@@ -37,7 +37,7 @@ from indicator_syncthing import IndicatorSyncthing, get_lock
 __all__ = ["main"]
 
 
-def main():
+def main():  # noqa: D103
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 	scriptname = os.path.basename(__file__)
