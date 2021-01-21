@@ -27,7 +27,7 @@ jobs:
           python-version: "3.6"
 
       - name: Install dependencies (Linux) 🔧
-        if: ${{ matrix.os == "ubuntu-20.04" }}
+        if: ${{ matrix.os == 'ubuntu-20.04' }}
         run: |
           sudo apt update
           sudo apt install libcairo2-dev pkg-config python3-dev libgirepository1.0-dev
@@ -37,7 +37,7 @@ jobs:
           python -m pip install --upgrade tox virtualenv
 
       - name: Install dependencies (Win/mac) 🔧
-        if: ${{ matrix.os != "ubuntu-20.04" }}
+        if: ${{ matrix.os != 'ubuntu-20.04' }}
         run: |
           python -VV
           python -m site
