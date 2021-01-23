@@ -30,7 +30,7 @@ import re
 import socket
 
 # 3rd party
-import appdirs  # type: ignore
+import appdirs
 from apeye import URL
 from domdf_python_tools.paths import PathPlus
 
