@@ -47,13 +47,22 @@ from requests_futures.sessions import FuturesSession  # type: ignore
 from indicator_syncthing.utils import get_lock, get_port, human_readable, shorten_path
 
 gi.require_version("Gtk", "3.0")
-gi.require_version("AppIndicator3", "0.1")
 
 # 3rd party
-from gi.repository import AppIndicator3 as appindicator  # type: ignore  # noqa: E402
 from gi.repository import Gio as gio  # noqa: E402
 from gi.repository import GLib as glib  # noqa: E402
 from gi.repository import Gtk as gtk  # noqa: E402
+
+try:
+    gi.require_version('AppIndicator3', '0.1')
+    from gi.repository import AppIndicator3 as appindicator  # type: ignore  # noqa: E402
+except (ValueError, ImportError):
+    try:
+        gi.require_version('AyatanaAppIndicator3', '0.1')
+        from gi.repository import AyatanaAppIndicator3 as appindicator  # type: ignore  # noqa: E402
+    except (ValueError, ImportError):
+        print("AppIndicator3 or AyatanaAppIndicator3 are not installed")
+        raise
 
 __all__ = ["IndicatorSyncthing", "get_lock", "human_readable", "shorten_path"]
 
